@@ -165,11 +165,14 @@ function buildVolumeMounts(
   });
 
   // Gmail credentials directory (for Gmail MCP inside the container)
+  // Use group-specific credentials if available, otherwise fall back to default
   const homeDir = os.homedir();
   const gmailDir = path.join(homeDir, '.gmail-mcp');
-  if (fs.existsSync(gmailDir)) {
+  const groupGmailDir = path.join(gmailDir, `group-${group.folder}`);
+  const gmailMount = fs.existsSync(groupGmailDir) ? groupGmailDir : gmailDir;
+  if (fs.existsSync(gmailMount)) {
     mounts.push({
-      hostPath: gmailDir,
+      hostPath: gmailMount,
       containerPath: '/home/node/.gmail-mcp',
       readonly: false, // MCP may need to refresh OAuth tokens
     });
