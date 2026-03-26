@@ -178,6 +178,16 @@ function buildVolumeMounts(
     });
   }
 
+  // Secondary Gmail account (kaitseng) — mounted as a separate home dir
+  const kaiGmailHome = path.join(homeDir, '.gmail-kaitseng-home');
+  if (fs.existsSync(kaiGmailHome)) {
+    mounts.push({
+      hostPath: kaiGmailHome,
+      containerPath: '/home/node-kaitseng',
+      readonly: false,
+    });
+  }
+
   // Per-group IPC namespace: each group gets its own IPC directory
   // This prevents cross-group privilege escalation via IPC
   const groupIpcDir = resolveGroupIpcPath(group.folder);

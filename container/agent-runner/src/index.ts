@@ -410,6 +410,7 @@ async function runQuery(
         'mcp__nanoclaw__*',
         'mcp__ollama__*',
         'mcp__gmail__*',
+        'mcp__gmail_kaitseng__*',
       ],
       env: sdkEnv,
       permissionMode: 'bypassPermissions',
@@ -432,6 +433,11 @@ async function runQuery(
         gmail: {
           command: 'npx',
           args: ['-y', '@gongrzhe/server-gmail-autoauth-mcp'],
+        },
+        gmail_kaitseng: {
+          command: 'npx',
+          args: ['-y', '@gongrzhe/server-gmail-autoauth-mcp'],
+          env: { HOME: '/home/node-kaitseng' },
         },
       },
       hooks: {
