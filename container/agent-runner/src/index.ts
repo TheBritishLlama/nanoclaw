@@ -19,6 +19,15 @@ import path from 'path';
 import { query, HookCallback, PreCompactHookInput } from '@anthropic-ai/claude-agent-sdk';
 import { fileURLToPath } from 'url';
 
+const DEEP_THINK_TRIGGER = /^deep think:\s*/i;
+const DEEP_THINK_BUDGET = 10000;
+
+function parseDeepThink(text: string): { prompt: string; deepThink: boolean } {
+  const match = text.match(DEEP_THINK_TRIGGER);
+  if (match) return { prompt: text.slice(match[0].length), deepThink: true };
+  return { prompt: text, deepThink: false };
+}
+
 interface ContainerInput {
   prompt: string;
   sessionId?: string;
@@ -336,7 +345,9 @@ async function runQuery(
   containerInput: ContainerInput,
   sdkEnv: Record<string, string | undefined>,
   resumeAt?: string,
+  deepThink = false,
 ): Promise<{ newSessionId?: string; lastAssistantUuid?: string; closedDuringQuery: boolean }> {
+  if (deepThink) log(`Deep think mode enabled (budget: ${DEEP_THINK_BUDGET} tokens)`);
   const stream = new MessageStream();
   stream.push(prompt);
 
@@ -399,6 +410,7 @@ async function runQuery(
       systemPrompt: globalClaudeMd
         ? { type: 'preset' as const, preset: 'claude_code' as const, append: globalClaudeMd }
         : undefined,
+      ...(deepThink ? { thinking: { type: 'enabled' as const, budgetTokens: DEEP_THINK_BUDGET } } : {}),
       allowedTools: [
         'Bash',
         'Read', 'Write', 'Edit', 'Glob', 'Grep',
@@ -411,6 +423,7 @@ async function runQuery(
         'mcp__ollama__*',
         'mcp__gmail__*',
         'mcp__gmail_kaitseng__*',
+        'mcp__obsidian__*',
       ],
       env: sdkEnv,
       permissionMode: 'bypassPermissions',
@@ -430,15 +443,28 @@ async function runQuery(
           command: 'node',
           args: [path.join(path.dirname(mcpServerPath), 'ollama-mcp-stdio.js')],
         },
-        gmail: {
-          command: 'npx',
-          args: ['-y', '@gongrzhe/server-gmail-autoauth-mcp'],
-        },
-        gmail_kaitseng: {
-          command: 'npx',
-          args: ['-y', '@gongrzhe/server-gmail-autoauth-mcp'],
-          env: { HOME: '/home/node-kaitseng' },
-        },
+        // Only register Gmail MCP when credentials are actually mounted.
+        // Non-main groups only get credentials if explicitly provisioned.
+        ...(fs.existsSync('/home/node/.gmail-mcp') ? {
+          gmail: {
+            command: 'npx',
+            args: ['-y', '@gongrzhe/server-gmail-autoauth-mcp'],
+          },
+        } : {}),
+        // kaitseng (school email) — main group only, never exposed to other groups
+        ...(containerInput.isMain && fs.existsSync('/home/node-kaitseng') ? {
+          gmail_kaitseng: {
+            command: 'npx',
+            args: ['-y', '@gongrzhe/server-gmail-autoauth-mcp'],
+            env: { HOME: '/home/node-kaitseng' },
+          },
+        } : {}),
+        ...(fs.existsSync('/workspace/obsidian') ? {
+          obsidian: {
+            command: 'mcp-server-filesystem',
+            args: ['/workspace/obsidian'],
+          },
+        } : {}),
       },
       hooks: {
         PreCompact: [{ hooks: [createPreCompactHook(containerInput.assistantName)] }],
@@ -511,15 +537,17 @@ async function main(): Promise<void> {
   try { fs.unlinkSync(IPC_INPUT_CLOSE_SENTINEL); } catch { /* ignore */ }
 
   // Build initial prompt (drain any pending IPC messages too)
-  let prompt = containerInput.prompt;
+  let rawPrompt = containerInput.prompt;
   if (containerInput.isScheduledTask) {
-    prompt = `[SCHEDULED TASK - The following message was sent automatically and is not coming directly from the user or group.]\n\n${prompt}`;
+    rawPrompt = `[SCHEDULED TASK - The following message was sent automatically and is not coming directly from the user or group.]\n\n${rawPrompt}`;
   }
   const pending = drainIpcInput();
   if (pending.length > 0) {
     log(`Draining ${pending.length} pending IPC messages into initial prompt`);
-    prompt += '\n' + pending.join('\n');
+    rawPrompt += '\n' + pending.join('\n');
   }
+
+  let { prompt, deepThink } = parseDeepThink(rawPrompt);
 
   // Query loop: run query → wait for IPC message → run new query → repeat
   let resumeAt: string | undefined;
@@ -527,7 +555,7 @@ async function main(): Promise<void> {
     while (true) {
       log(`Starting query (session: ${sessionId || 'new'}, resumeAt: ${resumeAt || 'latest'})...`);
 
-      const queryResult = await runQuery(prompt, sessionId, mcpServerPath, containerInput, sdkEnv, resumeAt);
+      const queryResult = await runQuery(prompt, sessionId, mcpServerPath, containerInput, sdkEnv, resumeAt, deepThink);
       if (queryResult.newSessionId) {
         sessionId = queryResult.newSessionId;
       }
@@ -556,7 +584,7 @@ async function main(): Promise<void> {
       }
 
       log(`Got new message (${nextMessage.length} chars), starting new query`);
-      prompt = nextMessage;
+      ({ prompt, deepThink } = parseDeepThink(nextMessage));
     }
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);

@@ -6,6 +6,7 @@ import { google, gmail_v1 } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 
 // isMain flag is used instead of MAIN_GROUP_FOLDER constant
+import { TRUSTED_EMAIL_SENDERS } from '../config.js';
 import { logger } from '../logger.js';
 import { registerChannel, ChannelOpts } from './registry.js';
 import {
@@ -88,6 +89,18 @@ export class GmailChannel implements Channel {
     const profile = await this.gmail.users.getProfile({ userId: 'me' });
     this.userEmail = profile.data.emailAddress || '';
     logger.info({ email: this.userEmail }, 'Gmail channel connected');
+
+    if (TRUSTED_EMAIL_SENDERS.size === 0) {
+      logger.warn(
+        'TRUSTED_EMAIL_SENDERS is not configured — all inbound emails will reach Jarvis. ' +
+        'Set TRUSTED_EMAIL_SENDERS in .env to restrict access (e.g. kaitseng@seattleacademy.org).',
+      );
+    } else {
+      logger.info(
+        { senders: [...TRUSTED_EMAIL_SENDERS] },
+        'Gmail channel: trusted sender filter active',
+      );
+    }
 
     // Start polling with error backoff
     const schedulePoll = () => {
@@ -267,6 +280,19 @@ export class GmailChannel implements Channel {
       return;
     }
 
+    // Only trusted senders may reach Jarvis — all others are silently dropped.
+    // Configure via TRUSTED_EMAIL_SENDERS in .env (comma-separated addresses).
+    if (
+      TRUSTED_EMAIL_SENDERS.size > 0 &&
+      !TRUSTED_EMAIL_SENDERS.has(senderEmail.toLowerCase())
+    ) {
+      logger.debug(
+        { sender: senderEmail },
+        'Gmail: dropping email from untrusted sender',
+      );
+      return;
+    }
+
     const chatJid = `gmail:${threadId}`;
 
     // Cache thread metadata for replies
@@ -297,7 +323,7 @@ export class GmailChannel implements Channel {
 
     this.opts.onMessage(mainJid, {
       id: messageId,
-      chat_jid: mainJid,
+      chat_jid: chatJid,
       sender: senderEmail,
       sender_name: senderName,
       content,

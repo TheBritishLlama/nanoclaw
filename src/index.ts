@@ -31,6 +31,7 @@ import {
   getAllRegisteredGroups,
   getAllSessions,
   getAllTasks,
+  getActiveGmailThreadJids,
   getMessagesSince,
   getNewMessages,
   getRouterState,
@@ -148,7 +149,11 @@ export function _setRegisteredGroups(
  * Called by the GroupQueue when it's this group's turn.
  */
 async function processGroupMessages(chatJid: string): Promise<boolean> {
-  const group = registeredGroups[chatJid];
+  const group =
+    registeredGroups[chatJid] ??
+    (chatJid.startsWith('gmail:')
+      ? Object.values(registeredGroups).find((g) => g.isMain)
+      : undefined);
   if (!group) return true;
 
   const channel = findChannel(channels, chatJid);
@@ -357,8 +362,10 @@ async function startMessageLoop(): Promise<void> {
   while (true) {
     try {
       const jids = Object.keys(registeredGroups);
+      const gmailJids = getActiveGmailThreadJids(lastTimestamp);
+      const allJids = [...new Set([...jids, ...gmailJids])];
       const { messages, newTimestamp } = getNewMessages(
-        jids,
+        allJids,
         lastTimestamp,
         ASSISTANT_NAME,
       );
@@ -382,7 +389,11 @@ async function startMessageLoop(): Promise<void> {
         }
 
         for (const [chatJid, groupMessages] of messagesByGroup) {
-          const group = registeredGroups[chatJid];
+          const group =
+            registeredGroups[chatJid] ??
+            (chatJid.startsWith('gmail:')
+              ? Object.values(registeredGroups).find((g) => g.isMain)
+              : undefined);
           if (!group) continue;
 
           const channel = findChannel(channels, chatJid);

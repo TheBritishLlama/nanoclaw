@@ -140,11 +140,25 @@ function buildVolumeMounts(
             // https://code.claude.com/docs/en/memory#manage-auto-memory
             CLAUDE_CODE_DISABLE_AUTO_MEMORY: '0',
           },
+          // NOTE: Do NOT add mcpServers here.
+          // MCP servers are managed exclusively by the agent runner's query() options.
+          // Adding them here creates a duplicate registration: the SDK passes
+          // --mcp-config (from query options) AND --setting-sources (which loads this
+          // file). Claude Code merges both, causing the settings.json version to win
+          // over the query() version — breaking the obsidian MCP scope.
         },
         null,
         2,
       ) + '\n',
     );
+  } else {
+    // Strip mcpServers from existing settings.json — agent runner owns MCP configuration.
+    // This cleans up any previously written mcpServers entries.
+    const existing = JSON.parse(fs.readFileSync(settingsFile, 'utf-8'));
+    if (existing.mcpServers) {
+      delete existing.mcpServers;
+      fs.writeFileSync(settingsFile, JSON.stringify(existing, null, 2) + '\n');
+    }
   }
 
   // Sync skills from container/skills/ into each group's .claude/skills/
@@ -165,12 +179,17 @@ function buildVolumeMounts(
   });
 
   // Gmail credentials directory (for Gmail MCP inside the container)
-  // Use group-specific credentials if available, otherwise fall back to default
+  // Non-main groups only get their own group-specific credentials — never the
+  // default account credentials, which belong to the main group (Jarvis outbox).
   const homeDir = os.homedir();
   const gmailDir = path.join(homeDir, '.gmail-mcp');
   const groupGmailDir = path.join(gmailDir, `group-${group.folder}`);
-  const gmailMount = fs.existsSync(groupGmailDir) ? groupGmailDir : gmailDir;
-  if (fs.existsSync(gmailMount)) {
+  const gmailMount = fs.existsSync(groupGmailDir)
+    ? groupGmailDir
+    : isMain
+      ? gmailDir   // main group falls back to the default Jarvis outbox credentials
+      : null;      // non-main groups get no Gmail access unless explicitly provisioned
+  if (gmailMount && fs.existsSync(gmailMount)) {
     mounts.push({
       hostPath: gmailMount,
       containerPath: '/home/node/.gmail-mcp',
@@ -178,14 +197,30 @@ function buildVolumeMounts(
     });
   }
 
-  // Secondary Gmail account (kaitseng) — mounted as a separate home dir
-  const kaiGmailHome = path.join(homeDir, '.gmail-kaitseng-home');
-  if (fs.existsSync(kaiGmailHome)) {
-    mounts.push({
-      hostPath: kaiGmailHome,
-      containerPath: '/home/node-kaitseng',
-      readonly: false,
-    });
+  // Secondary Gmail account (kaitseng) — main group only
+  // Never mount for other groups: this is the user's personal school email
+  if (isMain) {
+    const kaiGmailHome = path.join(homeDir, '.gmail-kaitseng-home');
+    if (fs.existsSync(kaiGmailHome)) {
+      mounts.push({
+        hostPath: kaiGmailHome,
+        containerPath: '/home/node-kaitseng',
+        readonly: false,
+      });
+    }
+  }
+
+  // Obsidian vault — context files, rules, and memory for Jarvis (main only)
+  // Never mount for other groups — vault contains private personal data
+  if (isMain) {
+    const obsidianVault = '/mnt/c/Users/Explo/Documents/Jarvis';
+    if (fs.existsSync(obsidianVault)) {
+      mounts.push({
+        hostPath: obsidianVault,
+        containerPath: '/workspace/obsidian',
+        readonly: false, // Jarvis needs write access for memory/
+      });
+    }
   }
 
   // Per-group IPC namespace: each group gets its own IPC directory

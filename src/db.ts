@@ -119,6 +119,7 @@ function createSchema(database: Database.Database): void {
     /* column already exists */
   }
 
+
   // Add channel and is_group columns if they don't exist (migration for existing DBs)
   try {
     database.exec(`ALTER TABLE chats ADD COLUMN channel TEXT`);
@@ -337,6 +338,17 @@ export function getNewMessages(
 
   return { messages: rows, newTimestamp };
 }
+
+export function getActiveGmailThreadJids(since: string): string[] {
+  const sql = `
+    SELECT DISTINCT chat_jid FROM messages
+    WHERE chat_jid LIKE 'gmail:%' AND timestamp > ?
+  `;
+  return (db.prepare(sql).all(since) as { chat_jid: string }[]).map(
+    (r) => r.chat_jid,
+  );
+}
+
 
 export function getMessagesSince(
   chatJid: string,
