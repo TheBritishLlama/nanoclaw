@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flock — Family Camping, Together</title>
+  <style>
+    /* === CSS Custom Properties === */
+    :root {
+      --sarah: #7C3AED;
+      --sarah-light: #EDE9FE;
+      --sarah-text: #6D28D9;
+      --sarah-gradient: linear-gradient(135deg, #7C3AED, #A78BFA);
+      --ruth: #2563EB;
+      --ruth-light: #DBEAFE;
+      --ruth-text: #2563EB;
+      --ruth-gradient: linear-gradient(135deg, #2563EB, #60A5FA);
+      --jake: #06B6D4;
+      --jake-light: #CFFAFE;
+      --jake-text: #0891B2;
+      --jake-gradient: linear-gradient(135deg, #06B6D4, #67E8F9);
+
+      --bg: #F8FAFC;
+      --card-bg: white;
+      --text-primary: #1E1B4B;
+      --text-secondary: #6B7280;
+      --text-muted: #9CA3AF;
+      --border: #E5E7EB;
+      --gradient-primary: linear-gradient(135deg, #7C3AED, #2563EB);
+      --dark-bg: #0F0B2E;
+      --card-radius: 14px;
+      --card-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      --green: #059669;
+      --green-light: #D1FAE5;
+    }
+
+    /* === Reset === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* === Screens === */
+    .screen { display: none; min-height: 100vh; animation: fadeIn 0.4s ease; }
+    .screen.active { display: flex; flex-direction: column; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* === Shared === */
+    .header {
+      padding: 16px 48px;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .logo { font-weight: 700; color: var(--sarah); font-size: 20px; letter-spacing: 1px; }
+    .btn-primary {
+      background: var(--gradient-primary);
+      color: white; border: none;
+      padding: 16px 48px; border-radius: 12px;
+      font-weight: 600; font-size: 16px; cursor: pointer;
+      box-shadow: 0 4px 16px rgba(124,58,237,0.3);
+      transition: transform 0.15s, box-shadow 0.15s;
+      font-family: inherit;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(124,58,237,0.4); }
+    .avatar {
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-weight: 600; border-radius: 10px; flex-shrink: 0;
+    }
+    .avatar.sm { width: 20px; height: 20px; font-size: 8px; border-radius: 6px; }
+    .avatar.md { width: 28px; height: 28px; font-size: 11px; border-radius: 8px; }
+    .avatar.lg { width: 48px; height: 48px; font-size: 18px; border-radius: 12px; }
+    .tag { padding: 4px 10px; border-radius: 6px; font-size: 12px; display: inline-block; }
+
+    /* === Screen 1: Family Setup === */
+    .setup-header-right { display: flex; align-items: center; gap: 24px; }
+    .setup-trip-info { color: var(--text-secondary); font-size: 14px; }
+    .budget-display { display: flex; align-items: center; gap: 10px; }
+    .budget-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+    .budget-amount { font-size: 20px; font-weight: 700; }
+    .budget-bar { width: 100px; height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; }
+    .budget-bar-fill { height: 100%; background: var(--gradient-primary); border-radius: 99px; width: 0%; transition: width 0.5s ease; }
+
+    .setup-heading { text-align: center; padding: 32px 48px 8px; }
+    .setup-heading h1 { font-size: 28px; font-weight: 700; }
+    .setup-heading p { color: var(--text-muted); font-size: 15px; margin-top: 4px; }
+
+    .duration-picker {
+      display: flex; align-items: center; justify-content: center; gap: 16px;
+      padding: 16px 48px;
+    }
+    .duration-picker label { font-size: 14px; color: var(--text-secondary); font-weight: 500; }
+    .duration-btn {
+      width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border);
+      background: white; font-size: 18px; cursor: pointer; display: flex;
+      align-items: center; justify-content: center; color: var(--text-secondary);
+      font-family: inherit; transition: background 0.15s;
+    }
+    .duration-btn:hover { background: var(--bg); }
+    .duration-value {
+      font-size: 20px; font-weight: 700; color: var(--sarah);
+      min-width: 80px; text-align: center;
+    }
+
+    .family-cards { padding: 24px 48px; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+    .member-card {
+      background: var(--card-bg); border-radius: var(--card-radius);
+      padding: 24px; box-shadow: var(--card-shadow);
+      width: 280px; flex-shrink: 0; border-top: 3px solid transparent;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .member-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+    .member-card-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 14px; }
+    .member-card-identity { display: flex; align-items: center; gap: 12px; }
+    .member-card-name { font-weight: 600; font-size: 17px; }
+    .member-card-role { color: var(--text-muted); font-size: 13px; }
+    .member-card-edit { color: var(--text-muted); font-size: 16px; cursor: pointer; background: none; border: none; padding: 4px; }
+    .member-card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .member-card-meta { display: flex; gap: 12px; font-size: 12px; color: var(--text-muted); }
+    .add-member-card {
+      background: var(--card-bg); border-radius: var(--card-radius); padding: 24px;
+      box-shadow: var(--card-shadow); border: 2px dashed var(--border);
+      width: 280px; flex-shrink: 0; display: flex; align-items: center;
+      justify-content: center; min-height: 180px; cursor: pointer; transition: border-color 0.2s;
+    }
+    .add-member-card:hover { border-color: var(--text-muted); }
+    .add-member-card-inner { text-align: center; color: var(--text-muted); }
+    .add-member-card-inner .plus { font-size: 32px; margin-bottom: 8px; }
+    .setup-footer { padding: 24px 48px; display: flex; justify-content: center; margin-top: auto; }
+
+    /* === Screen 2: Matching Animation === */
+    #screen-matching { background: var(--dark-bg); position: relative; justify-content: center; align-items: center; overflow: hidden; }
+    .matching-container { position: relative; width: 100%; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    .chip {
+      position: absolute; padding: 8px 16px; border-radius: 10px;
+      font-size: 14px; font-weight: 500; opacity: 0; pointer-events: none;
+    }
+    @keyframes scatter {
+      0% { opacity: 0; transform: translate(0,0) scale(0.5) rotate(0deg); }
+      30% { opacity: 1; transform: translate(var(--tx), var(--ty)) scale(1) rotate(var(--rot)); }
+      100% { opacity: 1; transform: translate(var(--tx), var(--ty)) scale(1) rotate(var(--rot)); }
+    }
+    .match-card {
+      position: absolute; background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15); border-radius: 12px;
+      padding: 16px 20px; opacity: 0; transform: scale(0.8);
+      transition: opacity 0.4s, transform 0.4s; min-width: 220px;
+    }
+    .match-card.visible { opacity: 1; transform: scale(1); }
+    .match-card-name { font-size: 15px; font-weight: 600; color: white; margin-bottom: 8px; }
+    .match-card-avatars { display: flex; gap: 4px; }
+
+    .settled-timeline {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      display: flex; gap: 48px; opacity: 0; transition: opacity 0.6s ease;
+      width: 80%; justify-content: center;
+    }
+    .settled-timeline.visible { opacity: 1; }
+    .settled-day { flex: 1; max-width: 300px; }
+    .settled-day-header {
+      font-size: 12px; text-transform: uppercase; letter-spacing: 2px;
+      font-weight: 600; margin-bottom: 12px; opacity: 0; transform: translateY(-10px);
+      transition: opacity 0.4s, transform 0.4s;
+    }
+    .settled-day-header.visible { opacity: 1; transform: translateY(0); }
+    .settled-activity {
+      background: rgba(255,255,255,0.08); border-radius: 8px;
+      padding: 10px 14px; margin-bottom: 8px;
+      display: flex; justify-content: space-between; align-items: center;
+      opacity: 0; transform: translateY(10px); transition: opacity 0.3s, transform 0.3s;
+    }
+    .settled-activity.visible { opacity: 1; transform: translateY(0); }
+    .settled-activity-name { font-size: 13px; color: white; font-weight: 500; }
+    .settled-activity-avatars { display: flex; gap: 3px; }
+
+    .matching-progress {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 20px 48px; border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .matching-progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .matching-progress-text { color: #A78BFA; font-size: 14px; font-weight: 500; }
+    .matching-progress-pct { color: var(--text-secondary); font-size: 13px; }
+    .matching-progress-track { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden; }
+    .matching-progress-fill { height: 100%; background: linear-gradient(90deg,#7C3AED,#2563EB,#06B6D4); border-radius: 99px; width: 0%; transition: width 0.3s ease; }
+
+    /* === Screen 3: Itinerary === */
+    .itin-header-center { display: flex; gap: 16px; }
+    .satisfaction { display: flex; align-items: center; gap: 8px; }
+    .satisfaction-score { font-size: 16px; font-weight: 700; }
+    .satisfaction-name { font-size: 9px; color: var(--text-muted); }
+    .itin-budget { text-align: right; }
+    .itin-budget-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+    .itin-budget-amount { font-size: 16px; font-weight: 700; }
+    .itin-budget-total { color: var(--text-muted); font-weight: 400; font-size: 12px; }
+
+    .day-tabs {
+      padding: 0 48px; background: var(--card-bg);
+      border-bottom: 1px solid var(--border); display: flex; gap: 0; flex-shrink: 0;
+    }
+    .day-tab {
+      padding: 14px 24px; font-size: 14px; color: var(--text-muted);
+      cursor: pointer; border: none; border-bottom: 2px solid transparent;
+      transition: color 0.2s, border-color 0.2s; background: none; font-family: inherit;
+    }
+    .day-tab:hover { color: var(--text-secondary); }
+    .day-tab.active { font-weight: 600; color: var(--sarah); border-bottom-color: var(--sarah); }
+    .day-tab.gear-tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+    .activity-grid {
+      padding: 28px 48px; display: grid; grid-template-columns: 1fr 1fr;
+      gap: 20px; flex: 1; align-content: start; overflow-y: auto;
+    }
+
+    .activity-card {
+      background: var(--card-bg); border-radius: var(--card-radius);
+      padding: 24px; box-shadow: var(--card-shadow);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .activity-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+    .activity-card-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; }
+    .activity-time { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+    .activity-name { font-size: 18px; font-weight: 700; }
+    .activity-meta { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+    .activity-avatars { display: flex; gap: 4px; }
+    .reactions { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--bg); border-radius: 10px; }
+    .reaction { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #4B5563; }
+    .meanwhile {
+      margin-top: 12px; padding: 10px 12px; border-radius: 8px; border-left: 3px solid transparent;
+    }
+    .meanwhile-label { font-size: 11px; font-weight: 600; margin-bottom: 2px; }
+    .meanwhile-text { font-size: 13px; color: #4B5563; }
+
+    /* Wildcard */
+    .wildcard-card {
+      background: linear-gradient(135deg, #1E1B4B, #312E81);
+      border-radius: var(--card-radius); padding: 24px;
+      box-shadow: 0 2px 12px rgba(124,58,237,0.2);
+      position: relative; overflow: hidden;
+      animation: wildcardGlow 3s ease-in-out infinite alternate;
+    }
+    @keyframes wildcardGlow {
+      from { box-shadow: 0 2px 12px rgba(124,58,237,0.2); }
+      to { box-shadow: 0 4px 24px rgba(124,58,237,0.35); }
+    }
+    .wildcard-watermark { position: absolute; top: -20px; right: -20px; font-size: 80px; opacity: 0.08; pointer-events: none; }
+    .wildcard-label { font-size: 11px; color: #A78BFA; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin-bottom: 8px; }
+    .wildcard-title { font-size: 18px; font-weight: 700; color: white; margin-bottom: 4px; }
+    .wildcard-subtitle { font-size: 13px; color: #C4B5FD; margin-bottom: 16px; }
+    .wildcard-inner { background: rgba(255,255,255,0.1); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+    .wildcard-activity-name { font-size: 16px; font-weight: 600; color: white; margin-bottom: 4px; }
+    .wildcard-activity-meta { font-size: 13px; color: #C4B5FD; }
+    .wildcard-reason { margin-top: 8px; font-size: 13px; color: #A78BFA; }
+    .wildcard-boost { display: flex; align-items: center; gap: 8px; }
+    .wildcard-boost-label { font-size: 12px; color: #A78BFA; }
+    .wildcard-boost-value { font-size: 14px; font-weight: 700; color: #34D399; }
+
+    /* === Gear Shop === */
+    .gear-grid {
+      padding: 28px 48px; display: grid; grid-template-columns: 1fr 1fr;
+      gap: 20px; flex: 1; align-content: start; overflow-y: auto;
+    }
+    .gear-card {
+      background: var(--card-bg); border-radius: var(--card-radius);
+      padding: 0; box-shadow: var(--card-shadow); overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .gear-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+    .gear-image {
+      height: 140px; display: flex; align-items: center; justify-content: center;
+      font-size: 56px; position: relative;
+    }
+    .gear-image-badge {
+      position: absolute; top: 12px; right: 12px;
+      background: var(--green); color: white;
+      font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+      padding: 4px 10px; border-radius: 6px;
+    }
+    .gear-body { padding: 20px; }
+    .gear-name { font-size: 17px; font-weight: 700; margin-bottom: 2px; }
+    .gear-price { font-size: 15px; color: var(--green); font-weight: 600; margin-bottom: 8px; }
+    .gear-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px; }
+    .gear-match-section { padding: 12px; background: var(--bg); border-radius: 10px; }
+    .gear-match-title { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 8px; }
+    .gear-match { display: flex; align-items: start; gap: 8px; font-size: 13px; color: #4B5563; margin-bottom: 6px; }
+    .gear-match:last-child { margin-bottom: 0; }
+    .gear-add-btn {
+      margin-top: 12px; width: 100%; padding: 10px;
+      background: var(--green); color: white; border: none;
+      border-radius: 8px; font-weight: 600; font-size: 13px;
+      cursor: pointer; font-family: inherit; transition: background 0.15s;
+    }
+    .gear-add-btn:hover { background: #047857; }
+    .gear-add-btn.added { background: var(--green-light); color: var(--green); }
+
+    /* Footer */
+    .itin-footer {
+      padding: 20px 48px; background: var(--card-bg);
+      border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+    }
+    .itin-footer-summary { font-size: 13px; color: var(--text-secondary); }
+    .itin-footer-total { font-size: 20px; font-weight: 700; margin-top: 2px; }
+
+    /* Booked overlay */
+    .booked-overlay {
+      position: fixed; inset: 0; background: rgba(15,11,46,0.85);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+    }
+    .booked-overlay.visible { opacity: 1; pointer-events: auto; }
+    .booked-check { font-size: 72px; margin-bottom: 16px; }
+    .booked-text { font-size: 28px; font-weight: 700; color: white; }
+    .booked-sub { font-size: 16px; color: #A78BFA; margin-top: 8px; }
+
+    /* === Screen 4: Packing Animation === */
+    #screen-packing { background: var(--dark-bg); position: relative; justify-content: center; align-items: center; overflow: hidden; }
+    .packing-container { position: relative; width: 100%; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    .pack-item {
+      position: absolute; display: flex; align-items: center; gap: 10px;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px; padding: 10px 16px; opacity: 0;
+      transform: translateY(40px) scale(0.8); transition: all 0.5s ease;
+    }
+    .pack-item.visible { opacity: 1; transform: translateY(0) scale(1); }
+    .pack-item .pack-emoji { font-size: 28px; }
+    .pack-item .pack-name { font-size: 14px; color: white; font-weight: 500; }
+    .pack-item .pack-price { font-size: 12px; color: #A78BFA; }
+
+    .backpack-icon {
+      font-size: 100px; opacity: 0; transform: scale(0.5);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .backpack-icon.visible { opacity: 1; transform: scale(1); }
+
+    .pack-progress { position: absolute; bottom: 0; left: 0; right: 0; padding: 20px 48px; border-top: 1px solid rgba(255,255,255,0.1); }
+    .pack-progress-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .pack-progress-text { color: #34D399; font-size: 14px; font-weight: 500; }
+    .pack-progress-pct { color: var(--text-secondary); font-size: 13px; }
+    .pack-progress-track { width: 100%; height: 4px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden; }
+    .pack-progress-fill { height: 100%; background: linear-gradient(90deg, #059669, #34D399, #06B6D4); border-radius: 99px; width: 0%; transition: width 0.4s ease; }
+
+    /* === Screen 5: Trip Summary === */
+    .summary-container {
+      flex: 1; padding: 40px 48px; display: flex; gap: 32px; overflow-y: auto;
+    }
+    .summary-left { flex: 1.2; }
+    .summary-right { flex: 0.8; }
+    .summary-title { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+    .summary-subtitle { font-size: 15px; color: var(--text-muted); margin-bottom: 28px; }
+    .summary-section { margin-bottom: 28px; }
+    .summary-section-title {
+      font-size: 12px; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 1.5px; font-weight: 600; margin-bottom: 12px;
+      padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    }
+    .summary-day { margin-bottom: 16px; }
+    .summary-day-header { font-size: 14px; font-weight: 600; color: var(--sarah); margin-bottom: 8px; }
+    .summary-activity-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 0; font-size: 13px;
+    }
+    .summary-activity-name { color: var(--text-primary); }
+    .summary-activity-cost { color: var(--text-secondary); font-weight: 500; }
+    .summary-activity-avatars { display: flex; gap: 2px; margin-left: 8px; }
+
+    .summary-gear-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid var(--border);
+    }
+    .summary-gear-row:last-child { border-bottom: none; }
+    .summary-gear-info { display: flex; align-items: center; gap: 10px; }
+    .summary-gear-emoji { font-size: 20px; }
+    .summary-gear-name { font-size: 13px; font-weight: 500; }
+    .summary-gear-price { font-size: 13px; color: var(--green); font-weight: 600; }
+
+    .cost-breakdown {
+      background: var(--card-bg); border-radius: var(--card-radius);
+      padding: 24px; box-shadow: var(--card-shadow);
+    }
+    .cost-row {
+      display: flex; justify-content: space-between; padding: 8px 0;
+      font-size: 14px; color: var(--text-secondary);
+    }
+    .cost-row.total {
+      border-top: 2px solid var(--border); margin-top: 8px; padding-top: 12px;
+      font-size: 18px; font-weight: 700; color: var(--text-primary);
+    }
+    .cost-row .cost-label { display: flex; align-items: center; gap: 6px; }
+    .cost-savings {
+      margin-top: 16px; padding: 12px; background: var(--green-light);
+      border-radius: 10px; text-align: center;
+      font-size: 14px; color: var(--green); font-weight: 600;
+    }
+
+    .satisfaction-summary {
+      background: var(--card-bg); border-radius: var(--card-radius);
+      padding: 24px; box-shadow: var(--card-shadow); margin-top: 20px;
+    }
+    .sat-row {
+      display: flex; align-items: center; gap: 12px; padding: 10px 0;
+    }
+    .sat-bar-track {
+      flex: 1; height: 8px; background: var(--bg); border-radius: 99px; overflow: hidden;
+    }
+    .sat-bar-fill { height: 100%; border-radius: 99px; transition: width 0.8s ease; }
+    .sat-pct { font-size: 16px; font-weight: 700; min-width: 44px; text-align: right; }
+
+    .summary-footer {
+      padding: 20px 48px; background: var(--card-bg); border-top: 1px solid var(--border);
+      display: flex; justify-content: center; flex-shrink: 0;
+    }
+
+    /* === Projector polish === */
+    @media (min-width: 1440px) {
+      .activity-name { font-size: 20px; }
+      .reaction { font-size: 14px; }
+      .member-card-name { font-size: 18px; }
+      .tag { font-size: 13px; padding: 5px 12px; }
+      .satisfaction-score { font-size: 18px; }
+      .day-tab { font-size: 15px; padding: 16px 28px; }
+      .setup-heading h1 { font-size: 32px; }
+      .gear-name { font-size: 18px; }
+      .gear-desc { font-size: 14px; }
+      .gear-match { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen 1: Family Setup -->
+  <div id="screen-setup" class="screen active">
+    <div class="header">
+      <div class="logo">FLOCK</div>
+      <div class="setup-header-right">
+        <div class="setup-trip-info">Pacific Northwest · Camping Trip</div>
+        <div class="budget-display">
+          <div>
+            <div class="budget-label">Trip Budget</div>
+            <div class="budget-amount">$<span id="budget-value">3,000</span></div>
+          </div>
+          <div class="budget-bar"><div class="budget-bar-fill" id="budget-fill"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="setup-heading">
+      <h1>Who's coming camping?</h1>
+      <p>Add your family, set the trip length, and we'll plan the perfect outdoor adventure.</p>
+    </div>
+    <div class="duration-picker">
+      <label>Trip Duration:</label>
+      <button class="duration-btn" onclick="changeDuration(-1)">−</button>
+      <div class="duration-value" id="duration-display">3 nights</div>
+      <button class="duration-btn" onclick="changeDuration(1)">+</button>
+    </div>
+    <div class="family-cards" id="family-cards"></div>
+    <div class="setup-footer">
+      <button class="btn-primary" onclick="showScreen('screen-matching')">Plan Our Adventure →</button>
+    </div>
+  </div>
+
+  <!-- Screen 2: Matching Animation -->
+  <div id="screen-matching" class="screen">
+    <div class="matching-container" id="matching-container"></div>
+    <div class="matching-progress">
+      <div class="matching-progress-header">
+        <div class="matching-progress-text">Matching your family to the perfect campsite...</div>
+        <div class="matching-progress-pct" id="matching-pct">0%</div>
+      </div>
+      <div class="matching-progress-track">
+        <div class="matching-progress-fill" id="matching-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3: Itinerary -->
+  <div id="screen-itinerary" class="screen">
+    <div class="header">
+      <div class="logo">FLOCK</div>
+      <div class="itin-header-center" id="satisfaction-scores"></div>
+      <div class="itin-budget">
+        <div class="itin-budget-label">Budget</div>
+        <div class="itin-budget-amount" id="itin-budget-display">$1,284 <span class="itin-budget-total">/ $3,000</span></div>
+      </div>
+    </div>
+    <div class="day-tabs" id="day-tabs"></div>
+    <div class="activity-grid" id="activity-grid"></div>
+    <div class="gear-grid" id="gear-grid" style="display:none"></div>
+    <div class="itin-footer">
+      <div>
+        <div class="itin-footer-summary" id="footer-summary">3 nights · 9 activities · everyone's happy</div>
+        <div class="itin-footer-total" id="footer-total">Total: $1,284</div>
+      </div>
+      <button class="btn-primary" onclick="bookEverything()">Book Everything →</button>
+    </div>
+    <div class="booked-overlay" id="booked-overlay">
+      <div class="booked-check">✓</div>
+      <div class="booked-text">Trip Booked!</div>
+      <div class="booked-sub">3 nights camping in the Pacific Northwest — everyone's happy.</div>
+      <button class="btn-primary" style="margin-top:32px" onclick="goToGear()">Now Get the Gear →</button>
+    </div>
+  </div>
+
+  <!-- Screen 4: Packing Animation -->
+  <div id="screen-packing" class="screen">
+    <div class="packing-container" id="packing-container"></div>
+    <div class="pack-progress">
+      <div class="pack-progress-header">
+        <div class="pack-progress-text">Packing your gear...</div>
+        <div class="pack-progress-pct" id="pack-pct">0%</div>
+      </div>
+      <div class="pack-progress-track">
+        <div class="pack-progress-fill" id="pack-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 5: Trip Summary -->
+  <div id="screen-summary" class="screen">
+    <div class="header">
+      <div class="logo">FLOCK</div>
+      <div style="font-size:14px;color:var(--text-muted)">Trip Summary</div>
+    </div>
+    <div class="summary-container">
+      <div class="summary-left">
+        <div class="summary-title">Your Pacific Northwest Camping Trip</div>
+        <div class="summary-subtitle" id="summary-subtitle">3 nights · 3 campsites · 9 activities · gear packed</div>
+        <div class="summary-section">
+          <div class="summary-section-title">Itinerary</div>
+          <div id="summary-itinerary"></div>
+        </div>
+        <div class="summary-section" id="summary-gear-section">
+          <div class="summary-section-title">Gear</div>
+          <div id="summary-gear-list"></div>
+        </div>
+      </div>
+      <div class="summary-right">
+        <div class="cost-breakdown">
+          <div class="summary-section-title" style="border:none;padding:0;margin-bottom:16px">Cost Breakdown</div>
+          <div id="cost-rows"></div>
+        </div>
+        <div class="satisfaction-summary">
+          <div class="summary-section-title" style="border:none;padding:0;margin-bottom:16px">Family Satisfaction</div>
+          <div id="sat-bars"></div>
+        </div>
+      </div>
+    </div>
+    <div class="summary-footer">
+      <button class="btn-primary" onclick="finalBook()">Confirm & Book Trip →</button>
+    </div>
+    <div class="booked-overlay" id="final-booked-overlay">
+      <div class="booked-check">🏕��</div>
+      <div class="booked-text">Adventure Awaits!</div>
+      <div class="booked-sub" id="final-booked-sub">Your camping trip is booked. See you in the Pacific Northwest.</div>
+    </div>
+  </div>
+
+  <script>
+    // === Demo Data ===
+    const FAMILY = [
+      {
+        id: 'sarah', name: 'Sarah', role: 'Mom', age: 38,
+        color: '#7C3AED', colorLight: '#EDE9FE', colorText: '#6D28D9',
+        gradient: 'linear-gradient(135deg, #7C3AED, #A78BFA)',
+        interests: [
+          { emoji: '📷', label: 'photography' },
+          { emoji: '🍜', label: 'food' },
+          { emoji: '🧘', label: 'relaxation' }
+        ],
+        energy: 'Medium', accessibility: 'No restrictions'
+      },
+      {
+        id: 'ruth', name: 'Ruth', role: 'Grandma', age: 67,
+        color: '#2563EB', colorLight: '#DBEAFE', colorText: '#2563EB',
+        gradient: 'linear-gradient(135deg, #2563EB, #60A5FA)',
+        interests: [
+          { emoji: '🏛️', label: 'history' },
+          { emoji: '🌸', label: 'gardens' },
+          { emoji: '🏔️', label: 'scenic views' }
+        ],
+        energy: 'Low', accessibility: 'Low mobility'
+      },
+      {
+        id: 'jake', name: 'Jake', role: 'Teen', age: 14,
+        color: '#06B6D4', colorLight: '#CFFAFE', colorText: '#0891B2',
+        gradient: 'linear-gradient(135deg, #06B6D4, #67E8F9)',
+        interests: [
+          { emoji: '🧗', label: 'adventure' },
+          { emoji: '🌮', label: 'street food' },
+          { emoji: '🎯', label: 'not-boring' }
+        ],
+        energy: 'High', accessibility: 'No restrictions'
+      }
+    ];
+
+    let tripDuration = 3;
+    const BUDGET = 3000;
+
+    const DAYS = [
+      {
+        label: 'Day 1', city: 'Olympic Peninsula',
+        activities: [
+          {
+            time: '10:00 AM', name: 'Set Up Camp at Kalaloch', location: 'Olympic National Park',
+            duration: '2 hours', cost: 42,
+            members: ['sarah', 'ruth', 'jake'],
+            reactions: {
+              sarah: 'Oceanfront bluff sites with driftwood-framed sunset views',
+              ruth: 'Level, accessible campsites just steps from the shore',
+              jake: 'Tide pools with sea stars and anemones right below camp'
+            },
+            meanwhile: null
+          },
+          {
+            time: '1:00 PM', name: 'Hoh Rainforest Trail', location: 'Olympic National Park',
+            duration: '3 hours', cost: 0,
+            members: ['sarah', 'jake'],
+            reactions: {
+              sarah: 'Moss-draped old-growth trees — one of the most photogenic forests on Earth',
+              jake: 'Fallen giant logs to climb over and a river crossing'
+            },
+            meanwhile: { member: 'ruth', activity: 'Kalaloch Lodge patio', reason: 'Rocking chairs overlooking the Pacific with complimentary tea' }
+          },
+          {
+            time: '6:00 PM', name: 'Beach Campfire & Stargazing', location: 'Kalaloch Beach',
+            duration: '3 hours', cost: 15,
+            members: ['sarah', 'ruth', 'jake'],
+            reactions: {
+              sarah: 'No light pollution — Milky Way visible to the naked eye',
+              ruth: 'The sound of waves and a warm fire — pure relaxation',
+              jake: 'S\'mores and trying to spot satellites'
+            },
+            meanwhile: null
+          }
+        ]
+      },
+      {
+        label: 'Day 2', city: 'Mt. Rainier',
+        activities: [
+          {
+            time: '8:00 AM', name: 'Drive to Cougar Rock Campground', location: 'Mt. Rainier National Park',
+            duration: '1.5 hours', cost: 30,
+            members: ['sarah', 'ruth', 'jake'],
+            reactions: {
+              sarah: 'Scenic drive through old-growth forest with pull-offs for photos',
+              ruth: 'Well-maintained campground with running water and restrooms',
+              jake: 'Chance to spot elk and marmots along the road'
+            },
+            meanwhile: null
+          },
+          {
+            time: '11:00 AM', name: 'Skyline Trail to Panorama Point', location: 'Paradise, Mt. Rainier',
+            duration: '4 hours', cost: 0,
+            members: ['jake'],
+            reactions: {
+              jake: 'Snowfields in summer and a 360° view of five volcanoes from the top'
+            },
+            meanwhile: { member: 'sarah', activity: 'Wildflower Meadow Photography Walk', reason: 'Peak bloom with lupine, paintbrush, and avalanche lilies against Rainier', alsoFor: 'ruth' }
+          },
+          {
+            time: '5:00 PM', name: 'Campfire Cooking: Dutch Oven Dinner', location: 'Cougar Rock Campground',
+            duration: '2 hours', cost: 35,
+            members: ['sarah', 'ruth', 'jake'],
+            reactions: {
+              sarah: 'Cast-iron cobbler with fresh berries from the camp store',
+              ruth: 'Family cooking together like the camping trips she remembers',
+              jake: 'Gets to be in charge of the fire — finally'
+            },
+            meanwhile: null
+          }
+        ]
+      },
+      {
+        label: 'Day 3', city: 'North Cascades',
+        activities: [
+          {
+            time: '8:30 AM', name: 'Colonial Creek Campground', location: 'North Cascades National Park',
+            duration: '1.5 hours', cost: 26,
+            members: ['sarah', 'ruth', 'jake'],
+            reactions: {
+              sarah: 'Lakeside sites with turquoise glacial water reflections',
+              ruth: 'Flat, shaded sites surrounded by towering Douglas firs',
+              jake: 'Diablo Lake is an unreal shade of blue-green'
+            },
+            meanwhile: null
+          },
+          {
+            time: '11:00 AM', name: 'Diablo Lake Kayaking', location: 'Diablo Lake',
+            duration: '3 hours', cost: 85,
+            members: ['sarah', 'jake'],
+            reactions: {
+              sarah: 'Glacier-fed turquoise water surrounded by 7,000ft peaks',
+              jake: 'Paddling into hidden coves with waterfalls'
+            },
+            meanwhile: { member: 'ruth', activity: 'North Cascades Visitor Center', reason: 'Indoor exhibits on glacier geology with a panoramic viewing deck' }
+          },
+          {
+            time: '4:00 PM', name: 'Final Night: Lakeside Campfire', location: 'Colonial Creek',
+            duration: '3 hours', cost: 15,
+            members: ['sarah', 'ruth', 'jake'],
+            reactions: {
+              sarah: 'Golden hour light on the lake — the trip\'s best photo opportunity',
+              ruth: 'Peaceful end to the trip with family around the fire',
+              jake: 'Night swim in the lake before it gets too cold'
+            },
+            meanwhile: null
+          }
+        ]
+      }
+    ];
+
+    const WILDCARD = {
+      member: 'jake',
+      name: 'Deception Pass Bridge Walk',
+      location: 'Deception Pass State Park',
+      duration: '2 hours',
+      cost: 10,
+      reason: '180-foot bridge over churning whitewater with cliff jumping nearby',
+      scoreBefore: 82,
+      scoreAfter: 91
+    };
+
+    const SATISFACTION = { sarah: 94, ruth: 89, jake: 82 };
+    const SATISFACTION_WITH_WILDCARD = { sarah: 94, ruth: 89, jake: 91 };
+    const TOTAL_COST = 1284;
+
+    const GEAR = [
+      {
+        emoji: '⛺',
+        name: 'REI Co-op Skyward 4 Tent',
+        price: 329,
+        bg: 'linear-gradient(135deg, #065F46, #059669)',
+        badge: 'Best Fit',
+        desc: 'Freestanding 4-person tent with full-coverage rainfly and color-coded pole clips for fast setup. 48 sq ft of floor space with two vestibules for gear storage.',
+        matches: {
+          sarah: 'Stargazing mesh ceiling — photograph the Milky Way from inside your sleeping bag',
+          ruth: 'Sets up in under 5 minutes with no complex threading or heavy lifting',
+          jake: 'Tall enough to sit upright and has interior pockets for stashing his stuff'
+        }
+      },
+      {
+        emoji: '🛏️',
+        name: 'Therm-a-Rest LuxuryMap Sleeping Pad',
+        price: 169,
+        bg: 'linear-gradient(135deg, #1E40AF, #3B82F6)',
+        badge: 'Comfort Pick',
+        desc: 'Self-inflating 3-inch thick pad with pressure-mapping foam that adapts to body shape. R-value of 6.0 for warmth on cold ground.',
+        matches: {
+          sarah: 'Compact rolled size fits easily alongside camera gear in the car',
+          ruth: 'Extra-thick cushioning designed specifically for side sleepers and sensitive joints',
+          jake: 'Tough 75D fabric that handles being dragged across tent floors'
+        }
+      },
+      {
+        emoji: '🔦',
+        name: 'BioLite AlpenGlow 500 Lantern',
+        price: 69,
+        bg: 'linear-gradient(135deg, #92400E, #D97706)',
+        badge: 'Family Favorite',
+        desc: 'Rechargeable LED lantern with ChromaReal color rendering for natural light. USB-C charging with 200hr runtime on low. Shake-to-change color modes.',
+        matches: {
+          sarah: 'ChromaReal LEDs render true colors — no orange cast on evening photos',
+          ruth: 'Simple shake controls and large on/off button, easy in the dark',
+          jake: 'Color party mode turns the campsite into a light show'
+        }
+      },
+      {
+        emoji: '🪑',
+        name: 'NEMO Stargaze Recliner Chair',
+        price: 219,
+        bg: 'linear-gradient(135deg, #5B21B6, #7C3AED)',
+        badge: 'Ruth\'s Pick',
+        desc: 'Suspended swinging camp chair that reclines to multiple angles. Auto-leveling legs work on uneven ground. Supports up to 300 lbs.',
+        matches: {
+          sarah: 'Reclines fully for long-exposure star photography without a tripod',
+          ruth: 'Ergonomic back support and smooth rocking motion — no stiff camp chairs',
+          jake: 'Swings like a hammock and he can tip it back to full recline'
+        }
+      },
+      {
+        emoji: '🍳',
+        name: 'Stanley Adventure Base Camp Cook Set',
+        price: 89,
+        bg: 'linear-gradient(135deg, #064E3B, #047857)',
+        badge: 'Essential',
+        desc: 'Nesting stainless steel pot, pan, cutting board, spatula, and 4-piece dish set. Everything packs inside the pot for zero-footprint storage.',
+        matches: {
+          sarah: 'Includes a proper cutting board for campfire food prep and plating',
+          ruth: 'Familiar pot-and-pan cooking — no learning curve with freeze-dried packets',
+          jake: 'Gets to cook over an open fire like a survival show'
+        }
+      },
+      {
+        emoji: '🎒',
+        name: 'Osprey Daylite Plus Daypack',
+        price: 75,
+        bg: 'linear-gradient(135deg, #155E75, #0891B2)',
+        badge: 'Jake\'s Pick',
+        desc: '20L daypack with padded laptop sleeve, front stretch-mesh pocket, and external hydration sleeve. Only 1.2 lbs. Fits all body sizes.',
+        matches: {
+          sarah: 'Padded internal sleeve fits her camera body and one lens securely',
+          ruth: 'Lightweight at 1.2 lbs with adjustable sternum strap for stability',
+          jake: 'External bungee and side pockets for water bottles and trail snacks'
+        }
+      }
+    ];
+
+    // === State ===
+    let currentTab = 0; // 0-2 = days, 3 = gear
+    let gearAdded = {};
+
+    // === Helpers ===
+    function getMember(id) { return FAMILY.find(m => m.id === id); }
+
+    // === Screen Navigation ===
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+      if (screenId === 'screen-matching') startMatchingAnimation();
+      if (screenId === 'screen-itinerary') {
+        renderSatisfactionScores();
+        renderDayTabs();
+        renderCurrentTab();
+      }
+      if (screenId === 'screen-packing') startPackingAnimation();
+      if (screenId === 'screen-summary') renderSummary();
+    }
+
+    // === Screen 1: Family Setup ===
+    function renderFamilyCards() {
+      const container = document.getElementById('family-cards');
+      container.innerHTML = '';
+      FAMILY.forEach(member => {
+        const card = document.createElement('div');
+        card.className = 'member-card';
+        card.style.borderTopColor = member.color;
+        card.innerHTML = `
+          <div class="member-card-header">
+            <div class="member-card-identity">
+              <div class="avatar lg" style="background:${member.gradient}">${member.name[0]}</div>
+              <div>
+                <div class="member-card-name">${member.name}</div>
+                <div class="member-card-role">${member.role} · ${member.age}</div>
+              </div>
+            </div>
+            <button class="member-card-edit">✏️</button>
+          </div>
+          <div class="member-card-tags">
+            ${member.interests.map(i => `<span class="tag" style="background:${member.colorLight};color:${member.colorText}">${i.emoji} ${i.label}</span>`).join('')}
+          </div>
+          <div class="member-card-meta">
+            <span>⚡ ${member.energy} energy</span>
+            <span>♿ ${member.accessibility}</span>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+      const addCard = document.createElement('div');
+      addCard.className = 'add-member-card';
+      addCard.innerHTML = '<div class="add-member-card-inner"><div class="plus">+</div><p>Add family member</p></div>';
+      container.appendChild(addCard);
+    }
+
+    function changeDuration(delta) {
+      tripDuration = Math.max(1, Math.min(7, tripDuration + delta));
+      document.getElementById('duration-display').textContent = tripDuration + (tripDuration === 1 ? ' night' : ' nights');
+    }
+
+    // === Screen 2: Matching Animation ===
+    function startMatchingAnimation() {
+      const container = document.getElementById('matching-container');
+      const fill = document.getElementById('matching-fill');
+      const pct = document.getElementById('matching-pct');
+      container.innerHTML = '';
+      fill.style.width = '0%';
+
+      const allChips = [];
+      FAMILY.forEach(m => m.interests.forEach(i => allChips.push({ member: m, interest: i })));
+
+      // Phase 1: Scatter
+      allChips.forEach((chip, i) => {
+        const el = document.createElement('div');
+        el.className = 'chip';
+        el.style.background = chip.member.colorLight;
+        el.style.color = chip.member.colorText;
+        el.textContent = `${chip.interest.emoji} ${chip.interest.label}`;
+        el.style.left = '50%'; el.style.top = '50%';
+        const tx = (Math.random() - 0.5) * 600;
+        const ty = (Math.random() - 0.5) * 300;
+        const rot = (Math.random() - 0.5) * 20;
+        el.style.setProperty('--tx', tx + 'px');
+        el.style.setProperty('--ty', ty + 'px');
+        el.style.setProperty('--rot', rot + 'deg');
+        el.style.animation = `scatter 1s ${i * 0.08}s ease forwards`;
+        container.appendChild(el);
+      });
+      fill.style.width = '25%'; pct.textContent = '25%';
+
+      // Phase 2: Match
+      setTimeout(() => {
+        fill.style.width = '60%'; pct.textContent = '60%';
+        container.querySelectorAll('.chip').forEach(c => { c.style.transition = 'opacity 0.5s'; c.style.opacity = '0'; });
+        const cardData = [
+          { name: 'Kalaloch Campground', members: ['sarah', 'ruth', 'jake'], x: -250 },
+          { name: 'Cougar Rock Camp', members: ['sarah', 'ruth', 'jake'], x: 0 },
+          { name: 'Diablo Lake Kayaking', members: ['sarah', 'jake'], x: 250 }
+        ];
+        cardData.forEach((card, i) => {
+          const el = document.createElement('div');
+          el.className = 'match-card';
+          el.style.left = `calc(50% + ${card.x}px - 110px)`;
+          el.style.top = 'calc(50% - 40px)';
+          el.innerHTML = `
+            <div class="match-card-name">${card.name}</div>
+            <div class="match-card-avatars">
+              ${card.members.map(id => { const m = getMember(id); return `<div class="avatar sm" style="background:${m.gradient}">${m.name[0]}</div>`; }).join('')}
+            </div>
+          `;
+          container.appendChild(el);
+          setTimeout(() => el.classList.add('visible'), 200 + i * 200);
+        });
+      }, 1200);
+
+      // Phase 3: Settle
+      setTimeout(() => {
+        fill.style.width = '90%'; pct.textContent = '90%';
+        container.querySelectorAll('.match-card').forEach(c => { c.style.opacity = '0'; c.style.transform = 'scale(0.8)'; });
+        const timeline = document.createElement('div');
+        timeline.className = 'settled-timeline';
+        timeline.innerHTML = DAYS.map((day, di) => `
+          <div class="settled-day">
+            <div class="settled-day-header" style="color:${FAMILY[di % 3].color}" data-delay="${di * 150}">${day.label} · ${day.city}</div>
+            ${day.activities.map((act, ai) => `
+              <div class="settled-activity" data-delay="${di * 150 + (ai + 1) * 100}">
+                <div class="settled-activity-name">${act.name}</div>
+                <div class="settled-activity-avatars">
+                  ${act.members.map(id => { const m = getMember(id); return `<div class="avatar sm" style="background:${m.gradient}">${m.name[0]}</div>`; }).join('')}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `).join('');
+        container.appendChild(timeline);
+        setTimeout(() => {
+          timeline.classList.add('visible');
+          timeline.querySelectorAll('[data-delay]').forEach(el => {
+            setTimeout(() => el.classList.add('visible'), parseInt(el.dataset.delay));
+          });
+        }, 300);
+      }, 2800);
+
+      setTimeout(() => { fill.style.width = '100%'; pct.textContent = '100%'; }, 3600);
+      setTimeout(() => showScreen('screen-itinerary'), 4200);
+    }
+
+    // === Screen 3: Itinerary ===
+    function renderSatisfactionScores() {
+      const scores = SATISFACTION_WITH_WILDCARD;
+      document.getElementById('satisfaction-scores').innerHTML = FAMILY.map(m => `
+        <div class="satisfaction">
+          <div class="avatar md" style="background:${m.gradient}">${m.name[0]}</div>
+          <div>
+            <div class="satisfaction-score" style="color:${m.color}">${scores[m.id]}%</div>
+            <div class="satisfaction-name">${m.name}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderDayTabs() {
+      const container = document.getElementById('day-tabs');
+      container.innerHTML = DAYS.map((day, i) => `
+        <button class="day-tab ${i === currentTab ? 'active' : ''}" onclick="switchTab(${i})">${day.label} · ${day.city}</button>
+      `).join('') + `
+        <button class="day-tab gear-tab ${currentTab === 3 ? 'active' : ''}" onclick="switchTab(3)">🎒 Recommended Gear</button>
+      `;
+    }
+
+    function switchTab(index) {
+      currentTab = index;
+      renderDayTabs();
+      renderCurrentTab();
+    }
+
+    function renderCurrentTab() {
+      const actGrid = document.getElementById('activity-grid');
+      const gearGrid = document.getElementById('gear-grid');
+      const footerBtn = document.querySelector('.itin-footer .btn-primary');
+      if (currentTab === 3) {
+        actGrid.style.display = 'none';
+        gearGrid.style.display = 'grid';
+        renderGearGrid();
+        footerBtn.textContent = 'Pack & Review Trip →';
+        footerBtn.setAttribute('onclick', 'showScreen("screen-packing")');
+      } else {
+        actGrid.style.display = 'grid';
+        gearGrid.style.display = 'none';
+        renderActivityGrid();
+        footerBtn.textContent = 'Book Everything →';
+        footerBtn.setAttribute('onclick', 'bookEverything()');
+      }
+    }
+
+    function renderActivityGrid() {
+      const container = document.getElementById('activity-grid');
+      const day = DAYS[currentTab];
+      container.innerHTML = '';
+
+      day.activities.forEach(act => {
+        const card = document.createElement('div');
+        card.className = 'activity-card';
+        card.innerHTML = `
+          <div class="activity-card-header">
+            <div>
+              <div class="activity-time">${act.time}</div>
+              <div class="activity-name">${act.name}</div>
+              <div class="activity-meta">${act.location} · ${act.duration}${act.cost > 0 ? ' · $' + act.cost : ' · Free'}</div>
+            </div>
+            <div class="activity-avatars">
+              ${act.members.map(id => { const m = getMember(id); return `<div class="avatar md" style="background:${m.gradient}">${m.name[0]}</div>`; }).join('')}
+            </div>
+          </div>
+          <div class="reactions">
+            ${act.members.map(id => {
+              const m = getMember(id);
+              return `<div class="reaction">
+                <div class="avatar sm" style="background:${m.gradient}">${m.name[0]}</div>
+                <div><strong style="color:${m.colorText}">${m.name}:</strong> ${act.reactions[id]}</div>
+              </div>`;
+            }).join('')}
+          </div>
+          ${act.meanwhile ? renderMeanwhile(act.meanwhile) : ''}
+        `;
+        container.appendChild(card);
+      });
+
+      // Wildcard on Day 1
+      if (currentTab === 0) {
+        const wc = document.createElement('div');
+        wc.className = 'wildcard-card';
+        const member = getMember(WILDCARD.member);
+        wc.innerHTML = `
+          <div class="wildcard-watermark">🃏</div>
+          <div class="wildcard-label">🃏 Wildcard Pick</div>
+          <div class="wildcard-title">${member.name}'s Choice</div>
+          <div class="wildcard-subtitle">One non-negotiable activity — no questions asked</div>
+          <div class="wildcard-inner">
+            <div class="wildcard-activity-name">${WILDCARD.name}</div>
+            <div class="wildcard-activity-meta">${WILDCARD.location} · ${WILDCARD.duration} · $${WILDCARD.cost}</div>
+            <div class="wildcard-reason">${WILDCARD.reason}</div>
+          </div>
+          <div class="wildcard-boost">
+            <div class="wildcard-boost-label">Satisfaction boost:</div>
+            <div class="wildcard-boost-value">${WILDCARD.scoreBefore}% → ${WILDCARD.scoreAfter}% (+${WILDCARD.scoreAfter - WILDCARD.scoreBefore}%)</div>
+          </div>
+        `;
+        container.appendChild(wc);
+      }
+    }
+
+    function renderMeanwhile(mw) {
+      const member = getMember(mw.member);
+      const alsoName = mw.alsoFor ? ` & ${getMember(mw.alsoFor).name}` : '';
+      return `
+        <div class="meanwhile" style="background:${member.colorLight};border-left-color:${member.color}">
+          <div class="meanwhile-label" style="color:${member.colorText}">Meanwhile, ${member.name}${alsoName}:</div>
+          <div class="meanwhile-text">${mw.activity} — ${mw.reason}</div>
+        </div>
+      `;
+    }
+
+    // === Gear Shop ===
+    function renderGearGrid() {
+      const container = document.getElementById('gear-grid');
+      container.innerHTML = '';
+      GEAR.forEach((item, i) => {
+        const card = document.createElement('div');
+        card.className = 'gear-card';
+        const added = gearAdded[i];
+        card.innerHTML = `
+          <div class="gear-image" style="background:${item.bg}">
+            <span>${item.emoji}</span>
+            <div class="gear-image-badge">${item.badge}</div>
+          </div>
+          <div class="gear-body">
+            <div class="gear-name">${item.name}</div>
+            <div class="gear-price">$${item.price}</div>
+            <div class="gear-desc">${item.desc}</div>
+            <div class="gear-match-section">
+              <div class="gear-match-title">Why it's perfect for your family</div>
+              ${FAMILY.map(m => `
+                <div class="gear-match">
+                  <div class="avatar sm" style="background:${m.gradient}">${m.name[0]}</div>
+                  <div><strong style="color:${m.colorText}">${m.name}:</strong> ${item.matches[m.id]}</div>
+                </div>
+              `).join('')}
+            </div>
+            <button class="gear-add-btn ${added ? 'added' : ''}" onclick="toggleGear(${i})">
+              ${added ? '✓ Added to Trip' : 'Add to Trip — $' + item.price}
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+      updateBudget();
+    }
+
+    function toggleGear(index) {
+      gearAdded[index] = !gearAdded[index];
+      renderGearGrid();
+    }
+
+    function updateBudget() {
+      let gearTotal = 0;
+      Object.keys(gearAdded).forEach(k => { if (gearAdded[k]) gearTotal += GEAR[k].price; });
+      const total = TOTAL_COST + gearTotal;
+      document.getElementById('itin-budget-display').innerHTML = `$${total.toLocaleString()} <span class="itin-budget-total">/ $${BUDGET.toLocaleString()}</span>`;
+      document.getElementById('footer-total').textContent = `Total: $${total.toLocaleString()}`;
+      const gearCount = Object.values(gearAdded).filter(Boolean).length;
+      const gearText = gearCount > 0 ? ` + ${gearCount} gear items` : '';
+      document.getElementById('footer-summary').textContent = `${tripDuration} nights · 9 activities${gearText} · everyone's happy`;
+    }
+
+    function bookEverything() {
+      document.getElementById('booked-overlay').classList.add('visible');
+    }
+
+    function goToGear() {
+      document.getElementById('booked-overlay').classList.remove('visible');
+      switchTab(3);
+    }
+
+    // === Screen 4: Packing Animation ===
+    function startPackingAnimation() {
+      const container = document.getElementById('packing-container');
+      const fill = document.getElementById('pack-fill');
+      const pct = document.getElementById('pack-pct');
+      container.innerHTML = '';
+      fill.style.width = '0%';
+
+      // Show backpack icon first
+      const backpack = document.createElement('div');
+      backpack.className = 'backpack-icon';
+      backpack.textContent = '🎒';
+      backpack.style.position = 'absolute';
+      backpack.style.top = '50%';
+      backpack.style.left = '50%';
+      backpack.style.transform = 'translate(-50%, -50%) scale(0.5)';
+      container.appendChild(backpack);
+      setTimeout(() => backpack.classList.add('visible'), 200);
+
+      // Get added gear items
+      const addedGear = GEAR.filter((_, i) => gearAdded[i]);
+      const allItems = addedGear.length > 0 ? addedGear : GEAR.slice(0, 3); // fallback to first 3 if none added
+
+      // Animate items flying into backpack
+      const positions = [
+        { x: -300, y: -120 }, { x: 300, y: -120 },
+        { x: -300, y: 40 }, { x: 300, y: 40 },
+        { x: -300, y: 200 }, { x: 300, y: 200 }
+      ];
+
+      allItems.forEach((item, i) => {
+        const el = document.createElement('div');
+        el.className = 'pack-item';
+        const pos = positions[i % positions.length];
+        el.style.left = `calc(50% + ${pos.x}px - 80px)`;
+        el.style.top = `calc(50% + ${pos.y}px - 20px)`;
+        el.innerHTML = `
+          <span class="pack-emoji">${item.emoji}</span>
+          <div>
+            <div class="pack-name">${item.name.split(' ').slice(0, 3).join(' ')}</div>
+            <div class="pack-price">$${item.price}</div>
+          </div>
+        `;
+        container.appendChild(el);
+
+        // Appear
+        setTimeout(() => {
+          el.classList.add('visible');
+          const progress = Math.round(((i + 1) / allItems.length) * 80);
+          fill.style.width = progress + '%';
+          pct.textContent = progress + '%';
+        }, 600 + i * 400);
+
+        // Fly toward center (backpack)
+        setTimeout(() => {
+          el.style.transition = 'all 0.5s ease-in';
+          el.style.left = 'calc(50% - 40px)';
+          el.style.top = 'calc(50% - 20px)';
+          el.style.opacity = '0';
+          el.style.transform = 'scale(0.3)';
+        }, 1000 + i * 400);
+      });
+
+      // Complete
+      const totalTime = 1400 + allItems.length * 400;
+      setTimeout(() => {
+        fill.style.width = '100%';
+        pct.textContent = '100%';
+        // Pulse the backpack
+        backpack.style.transition = 'transform 0.3s ease';
+        backpack.style.transform = 'translate(-50%, -50%) scale(1.2)';
+        setTimeout(() => { backpack.style.transform = 'translate(-50%, -50%) scale(1)'; }, 300);
+      }, totalTime);
+
+      setTimeout(() => showScreen('screen-summary'), totalTime + 800);
+    }
+
+    // === Screen 5: Trip Summary ===
+    function renderSummary() {
+      // Itinerary breakdown
+      const itinEl = document.getElementById('summary-itinerary');
+      let activitiesCost = 0;
+      itinEl.innerHTML = DAYS.map(day => {
+        return `
+          <div class="summary-day">
+            <div class="summary-day-header">${day.label} · ${day.city}</div>
+            ${day.activities.map(act => {
+              activitiesCost += act.cost;
+              return `
+                <div class="summary-activity-row">
+                  <div style="display:flex;align-items:center">
+                    <span class="summary-activity-name">${act.name}</span>
+                    <div class="summary-activity-avatars">
+                      ${act.members.map(id => { const m = getMember(id); return `<div class="avatar sm" style="background:${m.gradient}">${m.name[0]}</div>`; }).join('')}
+                    </div>
+                  </div>
+                  <span class="summary-activity-cost">${act.cost > 0 ? '$' + act.cost : 'Free'}</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }).join('');
+
+      // Add wildcard
+      itinEl.innerHTML += `
+        <div class="summary-day">
+          <div class="summary-day-header" style="color:#A78BFA">🃏 Wildcard</div>
+          <div class="summary-activity-row">
+            <span class="summary-activity-name">${WILDCARD.name}</span>
+            <span class="summary-activity-cost">$${WILDCARD.cost}</span>
+          </div>
+        </div>
+      `;
+      activitiesCost += WILDCARD.cost;
+
+      // Gear list
+      const addedGear = GEAR.filter((_, i) => gearAdded[i]);
+      let gearTotal = 0;
+      const gearSection = document.getElementById('summary-gear-section');
+      const gearList = document.getElementById('summary-gear-list');
+
+      if (addedGear.length > 0) {
+        gearSection.style.display = 'block';
+        gearList.innerHTML = addedGear.map(item => {
+          gearTotal += item.price;
+          return `
+            <div class="summary-gear-row">
+              <div class="summary-gear-info">
+                <span class="summary-gear-emoji">${item.emoji}</span>
+                <span class="summary-gear-name">${item.name}</span>
+              </div>
+              <span class="summary-gear-price">$${item.price}</span>
+            </div>
+          `;
+        }).join('');
+      } else {
+        gearSection.style.display = 'none';
+      }
+
+      // Cost breakdown
+      const grandTotal = activitiesCost + gearTotal;
+      const remaining = BUDGET - grandTotal;
+      const costRows = document.getElementById('cost-rows');
+      costRows.innerHTML = `
+        <div class="cost-row">
+          <span class="cost-label">🏕️ Campsites & Activities</span>
+          <span>$${activitiesCost.toLocaleString()}</span>
+        </div>
+        ${gearTotal > 0 ? `
+        <div class="cost-row">
+          <span class="cost-label">🎒 Gear</span>
+          <span>$${gearTotal.toLocaleString()}</span>
+        </div>` : ''}
+        <div class="cost-row total">
+          <span>Total</span>
+          <span>$${grandTotal.toLocaleString()}</span>
+        </div>
+        <div class="cost-row" style="color:var(--green)">
+          <span class="cost-label">💰 Remaining Budget</span>
+          <span>$${remaining.toLocaleString()}</span>
+        </div>
+      `;
+
+      if (remaining > 0) {
+        costRows.innerHTML += `
+          <div class="cost-savings">
+            $${remaining.toLocaleString()} under budget — enough for souvenirs & extras!
+          </div>
+        `;
+      }
+
+      // Satisfaction bars
+      const scores = SATISFACTION_WITH_WILDCARD;
+      const satBars = document.getElementById('sat-bars');
+      satBars.innerHTML = FAMILY.map(m => `
+        <div class="sat-row">
+          <div class="avatar md" style="background:${m.gradient}">${m.name[0]}</div>
+          <div style="min-width:50px;font-size:13px;font-weight:500">${m.name}</div>
+          <div class="sat-bar-track">
+            <div class="sat-bar-fill" style="background:${m.color};width:0%" data-target="${scores[m.id]}"></div>
+          </div>
+          <div class="sat-pct" style="color:${m.color}">${scores[m.id]}%</div>
+        </div>
+      `).join('');
+
+      // Animate bars after render
+      setTimeout(() => {
+        document.querySelectorAll('.sat-bar-fill').forEach(bar => {
+          bar.style.width = bar.dataset.target + '%';
+        });
+      }, 200);
+
+      // Subtitle
+      const gearCount = addedGear.length;
+      document.getElementById('summary-subtitle').textContent =
+        `${tripDuration} nights · 3 campsites · 9 activities${gearCount > 0 ? ` · ${gearCount} gear items` : ''} · everyone's happy`;
+    }
+
+    function finalBook() {
+      document.getElementById('final-booked-overlay').classList.add('visible');
+    }
+
+    // === Init ===
+    renderFamilyCards();
+  </script>
+</body>
+</html>
