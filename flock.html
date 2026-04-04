@@ -141,19 +141,26 @@
     .chip {
       position: absolute; padding: 8px 16px; border-radius: 10px;
       font-size: 14px; font-weight: 500; opacity: 0; pointer-events: none;
+      transform: translate(-50%, -50%);
+      will-change: transform, opacity;
     }
     @keyframes scatter {
-      0% { opacity: 0; transform: translate(0,0) scale(0.5) rotate(0deg); }
-      30% { opacity: 1; transform: translate(var(--tx), var(--ty)) scale(1) rotate(var(--rot)); }
-      100% { opacity: 1; transform: translate(var(--tx), var(--ty)) scale(1) rotate(var(--rot)); }
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5) rotate(0deg); }
+      20% { opacity: 1; }
+      100% { opacity: 1; transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1) rotate(var(--rot)); }
+    }
+    @keyframes chipFade {
+      to { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
     }
     .match-card {
       position: absolute; background: rgba(255,255,255,0.08);
       border: 1px solid rgba(255,255,255,0.15); border-radius: 12px;
-      padding: 16px 20px; opacity: 0; transform: scale(0.8);
-      transition: opacity 0.4s, transform 0.4s; min-width: 220px;
+      padding: 16px 20px; min-width: 220px;
+      opacity: 0; transform: scale(0.8) translateX(-50%);
+      will-change: transform, opacity;
     }
-    .match-card.visible { opacity: 1; transform: scale(1); }
+    .match-card.visible { opacity: 1; transform: scale(1) translateX(-50%); transition: opacity 0.5s ease, transform 0.5s ease; }
+    .match-card.fade-out { opacity: 0; transform: scale(0.8) translateX(-50%); transition: opacity 0.4s ease, transform 0.4s ease; }
     .match-card-name { font-size: 15px; font-weight: 600; color: white; margin-bottom: 8px; }
     .match-card-avatars { display: flex; gap: 4px; }
 
@@ -167,14 +174,14 @@
     .settled-day-header {
       font-size: 12px; text-transform: uppercase; letter-spacing: 2px;
       font-weight: 600; margin-bottom: 12px; opacity: 0; transform: translateY(-10px);
-      transition: opacity 0.4s, transform 0.4s;
+      transition: opacity 0.4s ease, transform 0.4s ease;
     }
     .settled-day-header.visible { opacity: 1; transform: translateY(0); }
     .settled-activity {
       background: rgba(255,255,255,0.08); border-radius: 8px;
       padding: 10px 14px; margin-bottom: 8px;
       display: flex; justify-content: space-between; align-items: center;
-      opacity: 0; transform: translateY(10px); transition: opacity 0.3s, transform 0.3s;
+      opacity: 0; transform: translateY(10px); transition: opacity 0.3s ease, transform 0.3s ease;
     }
     .settled-activity.visible { opacity: 1; transform: translateY(0); }
     .settled-activity-name { font-size: 13px; color: white; font-weight: 500; }
@@ -879,84 +886,124 @@
       const pct = document.getElementById('matching-pct');
       container.innerHTML = '';
       fill.style.width = '0%';
+      pct.textContent = '0%';
+
+      function progress(val) {
+        fill.style.width = val + '%';
+        pct.textContent = val + '%';
+      }
 
       const allChips = [];
       FAMILY.forEach(m => m.interests.forEach(i => allChips.push({ member: m, interest: i })));
 
-      // Phase 1: Scatter
+      // Phase 1: Scatter — chips fly outward from center
       allChips.forEach((chip, i) => {
         const el = document.createElement('div');
         el.className = 'chip';
         el.style.background = chip.member.colorLight;
         el.style.color = chip.member.colorText;
         el.textContent = `${chip.interest.emoji} ${chip.interest.label}`;
-        el.style.left = '50%'; el.style.top = '50%';
-        const tx = (Math.random() - 0.5) * 600;
-        const ty = (Math.random() - 0.5) * 300;
-        const rot = (Math.random() - 0.5) * 20;
+        el.style.left = '50%';
+        el.style.top = '50%';
+        const angle = (i / allChips.length) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+        const dist = 180 + Math.random() * 150;
+        const tx = Math.cos(angle) * dist;
+        const ty = Math.sin(angle) * dist;
+        const rot = (Math.random() - 0.5) * 24;
         el.style.setProperty('--tx', tx + 'px');
         el.style.setProperty('--ty', ty + 'px');
         el.style.setProperty('--rot', rot + 'deg');
-        el.style.animation = `scatter 1s ${i * 0.08}s ease forwards`;
+        el.style.animation = `scatter 0.9s ${i * 0.07}s cubic-bezier(0.16, 1, 0.3, 1) forwards`;
         container.appendChild(el);
       });
-      fill.style.width = '25%'; pct.textContent = '25%';
 
-      // Phase 2: Match
+      setTimeout(() => progress(15), 200);
+      setTimeout(() => progress(25), 600);
+
+      // Phase 2: Match — chips fade out, activity cards form
       setTimeout(() => {
-        fill.style.width = '60%'; pct.textContent = '60%';
-        container.querySelectorAll('.chip').forEach(c => { c.style.transition = 'opacity 0.5s'; c.style.opacity = '0'; });
-        const cardData = [
-          { name: 'Kalaloch Campground', members: ['sarah', 'ruth', 'jake'], x: -250 },
-          { name: 'Cougar Rock Camp', members: ['sarah', 'ruth', 'jake'], x: 0 },
-          { name: 'Diablo Lake Kayaking', members: ['sarah', 'jake'], x: 250 }
-        ];
-        cardData.forEach((card, i) => {
-          const el = document.createElement('div');
-          el.className = 'match-card';
-          el.style.left = `calc(50% + ${card.x}px - 110px)`;
-          el.style.top = 'calc(50% - 40px)';
-          el.innerHTML = `
-            <div class="match-card-name">${card.name}</div>
-            <div class="match-card-avatars">
-              ${card.members.map(id => { const m = getMember(id); return `<div class="avatar sm" style="background:${m.gradient}">${m.name[0]}</div>`; }).join('')}
-            </div>
-          `;
-          container.appendChild(el);
-          setTimeout(() => el.classList.add('visible'), 200 + i * 200);
+        progress(40);
+
+        // Fade out chips with stagger
+        container.querySelectorAll('.chip').forEach((c, i) => {
+          c.style.animation = `chipFade 0.4s ${i * 0.03}s ease forwards`;
         });
-      }, 1200);
 
-      // Phase 3: Settle
-      setTimeout(() => {
-        fill.style.width = '90%'; pct.textContent = '90%';
-        container.querySelectorAll('.match-card').forEach(c => { c.style.opacity = '0'; c.style.transform = 'scale(0.8)'; });
-        const timeline = document.createElement('div');
-        timeline.className = 'settled-timeline';
-        timeline.innerHTML = DAYS.map((day, di) => `
-          <div class="settled-day">
-            <div class="settled-day-header" style="color:${FAMILY[di % 3].color}" data-delay="${di * 150}">${day.label} · ${day.city}</div>
-            ${day.activities.map((act, ai) => `
-              <div class="settled-activity" data-delay="${di * 150 + (ai + 1) * 100}">
-                <div class="settled-activity-name">${act.name}</div>
-                <div class="settled-activity-avatars">
-                  ${act.members.map(id => { const m = getMember(id); return `<div class="avatar sm" style="background:${m.gradient}">${m.name[0]}</div>`; }).join('')}
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        `).join('');
-        container.appendChild(timeline);
+        setTimeout(() => progress(55), 400);
+
+        const cardData = [
+          { name: 'Kalaloch Campground', members: ['sarah', 'ruth', 'jake'], x: -260 },
+          { name: 'Cougar Rock Camp', members: ['sarah', 'ruth', 'jake'], x: 0 },
+          { name: 'Diablo Lake Kayaking', members: ['sarah', 'jake'], x: 260 }
+        ];
+
+        // Cards appear after chips start fading
         setTimeout(() => {
-          timeline.classList.add('visible');
-          timeline.querySelectorAll('[data-delay]').forEach(el => {
-            setTimeout(() => el.classList.add('visible'), parseInt(el.dataset.delay));
+          cardData.forEach((card, i) => {
+            const el = document.createElement('div');
+            el.className = 'match-card';
+            el.style.left = `calc(50% + ${card.x}px)`;
+            el.style.top = 'calc(50% - 40px)';
+            el.innerHTML = `
+              <div class="match-card-name">${card.name}</div>
+              <div class="match-card-avatars">
+                ${card.members.map(id => { const m = getMember(id); return `<div class="avatar sm" style="background:${m.gradient}">${m.name[0]}</div>`; }).join('')}
+              </div>
+            `;
+            container.appendChild(el);
+            setTimeout(() => el.classList.add('visible'), 150 + i * 250);
           });
         }, 300);
-      }, 2800);
+      }, 1300);
 
-      setTimeout(() => { fill.style.width = '100%'; pct.textContent = '100%'; }, 3600);
-      setTimeout(() => showScreen('screen-itinerary'), 4200);
+      // Phase 3: Settle — cards fade, timeline appears
+      setTimeout(() => {
+        progress(75);
+
+        // Fade out match cards
+        container.querySelectorAll('.match-card').forEach(c => c.classList.add('fade-out'));
+
+        // Remove old chips
+        setTimeout(() => {
+          container.querySelectorAll('.chip').forEach(c => c.remove());
+        }, 100);
+
+        // Build timeline
+        setTimeout(() => {
+          container.querySelectorAll('.match-card').forEach(c => c.remove());
+          progress(85);
+
+          const timeline = document.createElement('div');
+          timeline.className = 'settled-timeline';
+          timeline.innerHTML = DAYS.map((day, di) => `
+            <div class="settled-day">
+              <div class="settled-day-header" style="color:${FAMILY[di % 3].color}" data-delay="${di * 200}">
+                ${day.label} · ${day.city}
+              </div>
+              ${day.activities.map((act, ai) => `
+                <div class="settled-activity" data-delay="${di * 200 + (ai + 1) * 120}">
+                  <div class="settled-activity-name">${act.name}</div>
+                  <div class="settled-activity-avatars">
+                    ${act.members.map(id => { const m = getMember(id); return `<div class="avatar sm" style="background:${m.gradient}">${m.name[0]}</div>`; }).join('')}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `).join('');
+          container.appendChild(timeline);
+
+          // Fade in timeline, then stagger children
+          requestAnimationFrame(() => {
+            timeline.classList.add('visible');
+            timeline.querySelectorAll('[data-delay]').forEach(el => {
+              setTimeout(() => el.classList.add('visible'), parseInt(el.dataset.delay));
+            });
+          });
+        }, 500);
+      }, 3000);
+
+      setTimeout(() => progress(100), 4200);
+      setTimeout(() => showScreen('screen-itinerary'), 4800);
     }
 
     // === Screen 3: Itinerary ===
