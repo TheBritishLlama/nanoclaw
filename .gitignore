@@ -29,6 +29,9 @@ groups/discord_andrew_chat/*
 # Temp files
 .tmp-*
 
+# Worktrees
+.worktrees/
+
 # OS
 .DS_Store
 
