@@ -16,7 +16,6 @@ import {
   OnInboundMessage,
   RegisteredGroup,
 } from '../types.js';
-import type { GmailSender } from '../stack/delivery/outbound.js';
 
 export interface GmailChannelOpts {
   onMessage: OnInboundMessage;
@@ -229,51 +228,19 @@ export class GmailChannel implements Channel {
       if (!row) return false;
 
       // Lazy-import Stack modules only when we have a matching message
-      const [{ handleInboundReply }, { loadStackConfig }] = await Promise.all([
-        import('../stack/delivery/inbound.js'),
-        import('../stack/config.js'),
-      ]);
+      const [{ handleInboundReply }, { loadStackConfig }, { wrapGmailClient }] =
+        await Promise.all([
+          import('../stack/delivery/inbound.js'),
+          import('../stack/config.js'),
+          import('../stack/gmail.js'),
+        ]);
 
       const cfg = loadStackConfig(path.resolve('groups/stack/config.json'));
 
-      // Build an inline GmailSender that reuses the already-authenticated
-      // googleapis client from this channel — avoids a second OAuth round-trip.
-      const gmailSender: GmailSender = {
-        send: async ({ from, to, subject, html, text }) => {
-          const boundary = `----=_Part_${Date.now()}`;
-          const rawHeaders = [
-            `From: ${from}`,
-            `To: ${to}`,
-            `Subject: ${subject}`,
-            'MIME-Version: 1.0',
-            `Content-Type: multipart/alternative; boundary="${boundary}"`,
-            '',
-            `--${boundary}`,
-            'Content-Type: text/plain; charset=utf-8',
-            '',
-            text,
-            '',
-            `--${boundary}`,
-            'Content-Type: text/html; charset=utf-8',
-            '',
-            html,
-            '',
-            `--${boundary}--`,
-          ].join('\r\n');
-
-          const encoded = Buffer.from(rawHeaders)
-            .toString('base64')
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=+$/, '');
-
-          const res = await gmailClient.users.messages.send({
-            userId: 'me',
-            requestBody: { raw: encoded },
-          });
-          return { messageId: res.data.id ?? '' };
-        },
-      };
+      // Reuse this channel's already-authenticated gmail client; wrapGmailClient
+      // handles the post-send Message-Id fetch so /more replies persist with the
+      // correct RFC 2822 id for future round-trips.
+      const gmailSender = wrapGmailClient(gmailClient);
 
       const addrs = { from: cfg.senderEmail, to: cfg.recipientEmail };
       const result = await handleInboundReply(db, cfg.vaultPath, gmailSender, {
