@@ -15,12 +15,16 @@ groups/*
 !groups/main/
 !groups/global/
 !groups/discord_andrew_chat/
+!groups/stack/
 groups/main/*
 groups/global/*
 groups/discord_andrew_chat/*
+groups/stack/*
 !groups/main/CLAUDE.md
 !groups/global/CLAUDE.md
 !groups/discord_andrew_chat/CLAUDE.md
+!groups/stack/CLAUDE.md
+!groups/stack/config.json
 
 # Secrets
 *.keys.json

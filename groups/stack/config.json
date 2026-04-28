@@ -1,0 +1,62 @@
+{
+  "timezone": "America/Los_Angeles",
+  "deliveryTimes": ["08:00", "10:00", "15:00"],
+  "senderEmail": "amazingkangaroofilms@gmail.com",
+  "recipientEmail": "kaitseng@seattleacademy.org",
+  "vaultPath": "/mnt/c/Users/Explo/Documents/Stack",
+  "bucketWeights": { "tool": 0.7, "concept": 0.2, "lore": 0.1 },
+  "foundationsMixRatio": 0.5,
+  "confidenceThreshold": 0.7,
+  "reviewApproveThreshold": 6,
+  "queueMinDepth": 10,
+  "graderModel": "qwen2.5:14b",
+  "scoutClassifierModel": "qwen2.5:3b",
+  "enricherModel": "claude-haiku-4-5-20251001",
+  "rssFeeds": [
+    "https://simonwillison.net/atom/everything/",
+    "https://danluu.com/atom.xml",
+    "https://jvns.ca/atom.xml",
+    "https://drewdevault.com/blog/index.xml",
+    "https://fabiensanglard.net/rss.xml",
+    "https://www.bitsaboutmoney.com/archive/rss/",
+    "https://hackaday.com/blog/feed/"
+  ],
+  "enabledScrapers": ["hn","showhn","lobsters","reddit_selfhosted","github_trending","producthunt","rss","hackernewsletter"],
+  "samplingFormula": {
+    "minSampleProbability": 0.10,
+    "randomJitterMin": 0.7,
+    "randomJitterMax": 1.3,
+    "freshnessFactorActive": 1.0,
+    "freshnessFactorStale": 0.6,
+    "freshnessWindowDays": 7,
+    "tier2Multiplier": 0.3,
+    "tier2SamplePercent": 0.3
+  },
+  "discoveryAlgorithms": [
+    { "name": "generic_algorithm",        "enabled": true, "schedule": "0 4 */4 * *" },
+    { "name": "scout_A_hn_comments",      "enabled": true, "schedule": "0 3 * * 0" },
+    { "name": "scout_B_lobsters_comments","enabled": true, "schedule": "30 3 * * 0" },
+    { "name": "scout_E_brave_topic",      "enabled": true, "schedule": "0 4 * * 0" }
+  ],
+  "discovery": {
+    "domainBloomlist": ["github.com","youtube.com","twitter.com","x.com","wikipedia.org","reddit.com","medium.com","substack.com"],
+    "genericAlgorithmWindowDays": 30,
+    "genericAlgorithmMinRecentMentions": 5,
+    "genericAlgorithmMinDistinctSources": 2,
+    "genericAlgorithmStaleIfZeroMentionsInWindow": true,
+    "occurrenceThresholdForRssProbe": 3,
+    "trialDropsCount": 5,
+    "promotionMinAvgRating": 6,
+    "archiveMaxAvgRating": 4
+  },
+  "search": {
+    "provider": "brave",
+    "braveApiKey": "{env:BRAVE_API_KEY}",
+    "weeklyQueryBudget": 10
+  },
+  "ollama": {
+    "host": "http://localhost:11434",
+    "watchdogIntervalMinutes": 15,
+    "restartCommand": "auto"
+  }
+}
