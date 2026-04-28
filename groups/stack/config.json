@@ -36,7 +36,7 @@
     { "name": "generic_algorithm",        "enabled": true, "schedule": "0 4 */4 * *" },
     { "name": "scout_A_hn_comments",      "enabled": true, "schedule": "0 3 * * 0" },
     { "name": "scout_B_lobsters_comments","enabled": true, "schedule": "30 3 * * 0" },
-    { "name": "scout_E_brave_topic",      "enabled": true, "schedule": "0 4 * * 0" }
+    { "name": "scout_E_searxng_topic",    "enabled": true, "schedule": "0 4 * * 0" }
   ],
   "discovery": {
     "domainBloomlist": ["github.com","youtube.com","twitter.com","x.com","wikipedia.org","reddit.com","medium.com","substack.com"],
@@ -50,9 +50,9 @@
     "archiveMaxAvgRating": 4
   },
   "search": {
-    "provider": "brave",
-    "braveApiKey": "{env:BRAVE_API_KEY}",
-    "weeklyQueryBudget": 10
+    "provider": "searxng",
+    "searxngInstance": "{env:SEARXNG_INSTANCE}",
+    "weeklyQueryBudget": 50
   },
   "ollama": {
     "host": "http://localhost:11434",
