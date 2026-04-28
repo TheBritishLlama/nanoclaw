@@ -32,6 +32,7 @@ import {
   getAllSessions,
   getAllTasks,
   getActiveGmailThreadJids,
+  getDb,
   getMessagesSince,
   getNewMessages,
   getRouterState,
@@ -657,6 +658,18 @@ async function main(): Promise<void> {
   if (channels.length === 0) {
     logger.fatal('No channels connected');
     process.exit(1);
+  }
+
+  // Stack module init (optional — only if groups/stack/config.json exists)
+  const stackConfigPath = path.resolve('groups/stack/config.json');
+  if (fs.existsSync(stackConfigPath)) {
+    try {
+      const { initStack } = await import('./stack/index.js');
+      await initStack({ db: getDb() });
+      logger.info('Stack module initialized');
+    } catch (err) {
+      logger.error({ err }, 'Stack module failed to initialize — continuing without it');
+    }
   }
 
   // Start subsystems (independently of connection handler)

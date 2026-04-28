@@ -17,13 +17,14 @@ export async function scrapeRss(
   const arr = Array.isArray(items) ? items : [items];
 
   const now = new Date().toISOString();
-  return arr.map(it => {
+  const mapped: Array<RawItem | null> = arr.map(it => {
     const title = it.title?.['#text'] ?? it.title ?? '';
     const link = it.link?.['@_href'] ?? it.link ?? it.url ?? '';
-    const blurb = it.description ?? it.summary ?? undefined;
+    const blurb: string | undefined = it.description ?? it.summary ?? undefined;
     if (!title || !link) return null;
     return { source: sourceName, title: String(title), url: String(link), blurb, fetchedAt: now };
-  }).filter((x): x is RawItem => x !== null);
+  });
+  return mapped.filter((x): x is RawItem => x !== null);
 }
 
 export async function scrapeRssFeeds(
