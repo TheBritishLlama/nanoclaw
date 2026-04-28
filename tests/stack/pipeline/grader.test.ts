@@ -14,7 +14,7 @@ describe('gradeBatch', () => {
       { source:'hn', title:'A', url:'https://a', fetchedAt:'t' },
       { source:'hn', title:'B', url:'https://b', fetchedAt:'t' },
     ];
-    const out = await gradeBatch(ollama as any, 'qwen2.5:14b', items, {
+    const out = await gradeBatch(ollama as any, 'qwen3:14b', items, {
       exemplarBlock: '', recentFeedbackBlock: '', sourceWeightingHint: '',
     });
     expect(out).toHaveLength(2);
@@ -31,7 +31,7 @@ describe('gradeBatch', () => {
       ].join('\n')),
     };
     const items: RawItem[] = [{ source:'hn', title:'A', url:'https://a', fetchedAt:'t' }];
-    const out = await gradeBatch(ollama as any, 'qwen2.5:14b', items, {
+    const out = await gradeBatch(ollama as any, 'qwen3:14b', items, {
       exemplarBlock: '', recentFeedbackBlock: '', sourceWeightingHint: '',
     });
     expect(out).toHaveLength(1);

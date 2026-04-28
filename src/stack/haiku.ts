@@ -1,24 +1,40 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { query } from '@anthropic-ai/claude-agent-sdk';
 
 import type { HaikuClient } from './pipeline/enricher.js';
 
 /**
- * Creates a HaikuClient backed by the Anthropic SDK.
- * Reads ANTHROPIC_API_KEY from the environment.
+ * Creates a HaikuClient backed by the Claude Agent SDK.
+ *
+ * Auth is handled by the SDK via the local Claude Code installation —
+ * uses the user's existing OAuth token (CLAUDE_CODE_OAUTH_TOKEN or
+ * ~/.claude/.credentials.json) rather than a raw ANTHROPIC_API_KEY.
+ * This keeps Stack's Haiku usage on the user's Claude subscription.
+ *
+ * Tools are explicitly disabled — enrichment is pure text completion;
+ * the model should only return the JSON shape requested by the prompt.
  */
 export function createHaiku(model: string): HaikuClient {
-  const client = new Anthropic();
   return {
     async complete(prompt: string): Promise<string> {
-      const response = await client.messages.create({
-        model,
-        max_tokens: 4096,
-        messages: [{ role: 'user', content: prompt }],
-      });
-      return response.content
-        .filter((b) => b.type === 'text')
-        .map((b) => (b as { type: 'text'; text: string }).text)
-        .join('\n');
+      let result = '';
+      for await (const message of query({
+        prompt,
+        options: {
+          model,
+          allowedTools: [],
+          permissionMode: 'bypassPermissions',
+          systemPrompt: undefined,
+        },
+      })) {
+        if (message.type === 'assistant' && message.message?.content) {
+          for (const block of message.message.content) {
+            if (block.type === 'text' && typeof block.text === 'string') {
+              result += block.text;
+            }
+          }
+        }
+      }
+      return result;
     },
   };
 }

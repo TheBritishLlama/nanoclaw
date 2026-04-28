@@ -37,7 +37,7 @@ describe('Stack end-to-end smoke', () => {
       source: 'hn', title: 'Tailscale Funnel launches',
       url: 'https://tailscale.com', fetchedAt: 't',
     }];
-    const graded = await gradeBatch(ollama as any, 'qwen2.5:14b', items,
+    const graded = await gradeBatch(ollama as any, 'qwen3:14b', items,
       { exemplarBlock: '', recentFeedbackBlock: '', sourceWeightingHint: '' });
     expect(graded[0].keep).toBe(true);
 

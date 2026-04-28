@@ -29,7 +29,7 @@ npm run build
 ## Phase 3: Setup
 
 1. Ensure Ollama is installed and reachable. If not, run `/add-ollama-tool` first.
-2. Pull required models: `ollama pull qwen2.5:14b`
+2. Pull required models: `ollama pull qwen3:14b`
 3. Re-authenticate Gmail (Stack sends FROM `amazingkangaroofilms@gmail.com` TO `kaitseng@seattleacademy.org`):
    ```bash
    npx tsx scripts/gmail-auth.ts

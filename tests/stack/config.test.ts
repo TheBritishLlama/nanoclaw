@@ -13,7 +13,7 @@ describe('loadStackConfig', () => {
     expect(cfg.foundationsMixRatio).toBe(0.5);
     expect(cfg.confidenceThreshold).toBe(0.7);
     expect(cfg.reviewApproveThreshold).toBe(6);
-    expect(cfg.graderModel).toBe('qwen2.5:14b');
+    expect(cfg.graderModel).toBe('qwen3:14b');
     expect(cfg.enricherModel).toBe('claude-haiku-4-5-20251001');
   });
 
@@ -29,7 +29,7 @@ describe('loadStackConfig', () => {
       confidenceThreshold: 0.7,
       reviewApproveThreshold: 6,
       queueMinDepth: 10,
-      graderModel: 'qwen2.5:14b',
+      graderModel: 'qwen3:14b',
       enricherModel: 'claude-haiku-4-5-20251001',
       rssFeeds: [],
       enabledScrapers: [],

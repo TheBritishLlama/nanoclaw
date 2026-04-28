@@ -21,7 +21,7 @@ describe('OllamaClient', () => {
       json: async () => ({ response: 'hello' }),
     } as unknown as Response);
     const c = new OllamaClient('http://x', fetcher);
-    const out = await c.generate('qwen2.5:14b', 'prompt');
+    const out = await c.generate('qwen3:14b', 'prompt');
     expect(out).toBe('hello');
   });
 });
