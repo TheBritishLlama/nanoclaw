@@ -7,6 +7,7 @@ import { OAuth2Client } from 'google-auth-library';
 
 // isMain flag is used instead of MAIN_GROUP_FOLDER constant
 import { TRUSTED_EMAIL_SENDERS } from '../config.js';
+import { getDb } from '../db.js';
 import { logger } from '../logger.js';
 import { registerChannel, ChannelOpts } from './registry.js';
 import {
@@ -93,7 +94,7 @@ export class GmailChannel implements Channel {
     if (TRUSTED_EMAIL_SENDERS.size === 0) {
       logger.warn(
         'TRUSTED_EMAIL_SENDERS is not configured — all inbound emails will reach Jarvis. ' +
-        'Set TRUSTED_EMAIL_SENDERS in .env to restrict access (e.g. kaitseng@seattleacademy.org).',
+          'Set TRUSTED_EMAIL_SENDERS in .env to restrict access (e.g. kaitseng@seattleacademy.org).',
       );
     } else {
       logger.info(
@@ -195,7 +196,71 @@ export class GmailChannel implements Channel {
   // --- Private ---
 
   private buildQuery(): string {
-    return 'is:unread subject:@Jarvis';
+    const base = 'is:unread subject:@Jarvis';
+    // Widen the query to also catch Stack reply emails (subject:"Re: Stack")
+    // when the Stack module is configured.  The Stack dispatch path intercepts
+    // those before they reach the normal NanoClaw agent routing.
+    if (fs.existsSync(path.resolve('groups/stack/config.json'))) {
+      return `(${base}) OR (is:unread subject:"Re: Stack")`;
+    }
+    return base;
+  }
+
+  /**
+   * If the email is a reply to a Stack-delivered drop, route it to the Stack
+   * inbound handler and return true (so the caller skips normal routing).
+   * Returns false for all non-Stack messages.
+   * Never throws — any error falls through to normal routing.
+   */
+  private async maybeDispatchToStack(
+    inReplyTo: string,
+    body: string,
+    gmailClient: gmail_v1.Gmail,
+  ): Promise<boolean> {
+    if (!inReplyTo) return false;
+    if (!fs.existsSync(path.resolve('groups/stack/config.json'))) return false;
+
+    try {
+      const db = getDb();
+      const row = db
+        .prepare('SELECT id FROM stack_queue WHERE email_message_id = ?')
+        .get(inReplyTo) as { id: string } | undefined;
+      if (!row) return false;
+
+      // Lazy-import Stack modules only when we have a matching message
+      const [{ handleInboundReply }, { loadStackConfig }, { wrapGmailClient }] =
+        await Promise.all([
+          import('../stack/delivery/inbound.js'),
+          import('../stack/config.js'),
+          import('../stack/gmail.js'),
+        ]);
+
+      const cfg = loadStackConfig(path.resolve('groups/stack/config.json'));
+
+      // Reuse this channel's already-authenticated gmail client; wrapGmailClient
+      // handles the post-send Message-Id fetch so /more replies persist with the
+      // correct RFC 2822 id for future round-trips.
+      const gmailSender = wrapGmailClient(gmailClient);
+
+      const addrs = { from: cfg.senderEmail, to: cfg.recipientEmail };
+      const result = await handleInboundReply(db, cfg.vaultPath, gmailSender, {
+        addrs,
+        threadMessageId: inReplyTo,
+        body,
+      });
+
+      logger.info(
+        { inReplyTo, acked: result.acked, reason: result.reason },
+        'Stack inbound reply handled',
+      );
+      return true;
+    } catch (err) {
+      logger.warn(
+        { err, inReplyTo },
+        'Stack inbound dispatch failed — falling through to normal routing',
+      );
+      return false;
+    }
   }
 
   private async pollForMessages(): Promise<void> {
@@ -259,6 +324,7 @@ export class GmailChannel implements Channel {
     const from = getHeader('From');
     const subject = getHeader('Subject');
     const rfc2822MessageId = getHeader('Message-ID');
+    const inReplyTo = getHeader('In-Reply-To');
     const threadId = msg.data.threadId || messageId;
     const timestamp = new Date(
       parseInt(msg.data.internalDate || '0', 10),
@@ -278,6 +344,34 @@ export class GmailChannel implements Channel {
     if (!body) {
       logger.debug({ messageId, subject }, 'Skipping email with no text body');
       return;
+    }
+
+    // Stack inbound: if this is a reply to a Stack drop, route to Stack handler
+    // and skip normal NanoClaw routing entirely.  Runs before the trusted-sender
+    // filter so Stack replies from the recipient address always get processed even
+    // if TRUSTED_EMAIL_SENDERS is not configured to include it.
+    if (inReplyTo && this.gmail) {
+      const handledByStack = await this.maybeDispatchToStack(
+        inReplyTo,
+        body,
+        this.gmail,
+      );
+      if (handledByStack) {
+        // Mark as read and return — do not forward to NanoClaw agent.
+        try {
+          await this.gmail.users.messages.modify({
+            userId: 'me',
+            id: messageId,
+            requestBody: { removeLabelIds: ['UNREAD'] },
+          });
+        } catch (err) {
+          logger.warn(
+            { messageId, err },
+            'Failed to mark Stack reply email as read',
+          );
+        }
+        return;
+      }
     }
 
     // Only trusted senders may reach Jarvis — all others are silently dropped.

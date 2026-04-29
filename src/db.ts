@@ -119,7 +119,6 @@ function createSchema(database: Database.Database): void {
     /* column already exists */
   }
 
-
   // Add channel and is_group columns if they don't exist (migration for existing DBs)
   try {
     database.exec(`ALTER TABLE chats ADD COLUMN channel TEXT`);
@@ -151,6 +150,11 @@ export function initDatabase(): void {
 
   // Migrate from JSON files if they exist
   migrateJsonState();
+}
+
+/** Returns the shared database handle. Must be called after initDatabase(). */
+export function getDb(): Database.Database {
+  return db;
 }
 
 /** @internal - for tests only. Creates a fresh in-memory database. */
@@ -348,7 +352,6 @@ export function getActiveGmailThreadJids(since: string): string[] {
     (r) => r.chat_jid,
   );
 }
-
 
 export function getMessagesSince(
   chatJid: string,

@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Lobsters</title>
+    <link>https://lobste.rs/</link>
+    <atom:link href="https://lobste.rs/rss" rel="self"/>
+    <description></description>
+    <pubDate>Tue, 28 Apr 2026 04:43:40 -0500</pubDate>
+    <ttl>120</ttl>
+    <item>
+      <title>jjj</title>
+      <link>https://oppi.li/posts/jjj/</link>
+      <guid>https://lobste.rs/s/exlogg</guid>
+      <author>oppi.li by op</author>
+      <pubDate>Tue, 28 Apr 2026 04:43:40 -0500</pubDate>
+      <comments>https://lobste.rs/s/exlogg/jjj</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/exlogg/jjj"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>vcs</category>
+    </item>
+    <item>
+      <title>An update on GitHub availability</title>
+      <link>https://github.blog/news-insights/company-news/an-update-on-github-availability/</link>
+      <guid>https://lobste.rs/s/tknct7</guid>
+      <author>github.blog via martinald</author>
+      <pubDate>Tue, 28 Apr 2026 06:20:06 -0500</pubDate>
+      <comments>https://lobste.rs/s/tknct7/update_on_github_availability</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/tknct7/update_on_github_availability"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>vcs</category>
+    </item>
+    <item>
+      <title>Who Owns the Code Claude Wrote?</title>
+      <link>https://legallayer.substack.com/p/who-owns-the-claude-code-wrote</link>
+      <guid>https://lobste.rs/s/pv23xq</guid>
+      <author>legallayer.substack.com via pushcx</author>
+      <pubDate>Tue, 28 Apr 2026 07:25:54 -0500</pubDate>
+      <comments>https://lobste.rs/s/pv23xq/who_owns_code_claude_wrote</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/pv23xq/who_owns_code_claude_wrote"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>law</category>
+      <category>vibecoding</category>
+    </item>
+    <item>
+      <title>GitHub Actions is the weakest link</title>
+      <link>https://nesbitt.io/2026/04/28/github-actions-is-the-weakest-link.html</link>
+      <guid>https://lobste.rs/s/ngogon</guid>
+      <author>nesbitt.io via untitaker</author>
+      <pubDate>Tue, 28 Apr 2026 05:50:00 -0500</pubDate>
+      <comments>https://lobste.rs/s/ngogon/github_actions_is_weakest_link</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/ngogon/github_actions_is_weakest_link"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>security</category>
+      <category>devops</category>
+    </item>
+    <item>
+      <title>FOSDEM 2026 - All FOSDEM 2026 videos are online</title>
+      <link>https://fosdem.org/2026/news/2026-04-26-all-videos-published/</link>
+      <guid>https://lobste.rs/s/tchcjd</guid>
+      <author>fosdem.org via larsw</author>
+      <pubDate>Tue, 28 Apr 2026 05:21:43 -0500</pubDate>
+      <comments>https://lobste.rs/s/tchcjd/fosdem_2026_all_fosdem_2026_videos_are</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/tchcjd/fosdem_2026_all_fosdem_2026_videos_are"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>event</category>
+      <category>video</category>
+    </item>
+    <item>
+      <title>Bypassing DPI with eBPF, no VPN or proxy needed</title>
+      <link>https://bora.sh/bypassing-dpi-with-ebpf/</link>
+      <guid>https://lobste.rs/s/mhflmp</guid>
+      <author>bora.sh by boratanrikulu</author>
+      <pubDate>Tue, 28 Apr 2026 07:34:00 -0500</pubDate>
+      <comments>https://lobste.rs/s/mhflmp/bypassing_dpi_with_ebpf_no_vpn_proxy</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/mhflmp/bypassing_dpi_with_ebpf_no_vpn_proxy"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>security</category>
+      <category>linux</category>
+      <category>networking</category>
+    </item>
+    <item>
+      <title>Donating to open source</title>
+      <link>https://entropicthoughts.com/open-source-donation</link>
+      <guid>https://lobste.rs/s/rmujw3</guid>
+      <author>entropicthoughts.com by kqr</author>
+      <pubDate>Tue, 28 Apr 2026 00:23:54 -0500</pubDate>
+      <comments>https://lobste.rs/s/rmujw3/donating_open_source</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/rmujw3/donating_open_source"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>culture</category>
+    </item>
+    <item>
+      <title>Email is crazy</title>
+      <link>https://samkhawase.com/blog/email-is-crazy/</link>
+      <guid>https://lobste.rs/s/esrk11</guid>
+      <author>samkhawase.com by FlyingSnake</author>
+      <pubDate>Mon, 27 Apr 2026 09:01:00 -0500</pubDate>
+      <comments>https://lobste.rs/s/esrk11/email_is_crazy</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/esrk11/email_is_crazy"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>security</category>
+      <category>networking</category>
+      <category>email</category>
+    </item>
+    <item>
+      <title>The Best (Query) Plans of Mice and Men</title>
+      <link>https://ohadravid.github.io/posts/2026-04-query-plans/</link>
+      <guid>https://lobste.rs/s/a7aoor</guid>
+      <author>ohadravid.github.io by ohrv</author>
+      <pubDate>Tue, 28 Apr 2026 09:30:43 -0500</pubDate>
+      <comments>https://lobste.rs/s/a7aoor/best_query_plans_mice_men</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/a7aoor/best_query_plans_mice_men"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>databases</category>
+      <category>performance</category>
+    </item>
+    <item>
+      <title>Illegal vs Unwanted States</title>
+      <link>https://buttondown.com/hillelwayne/archive/illegal-vs-unwanted-states/</link>
+      <guid>https://lobste.rs/s/szrxqe</guid>
+      <author>buttondown.com via ajdecon</author>
+      <pubDate>Tue, 28 Apr 2026 10:40:05 -0500</pubDate>
+      <comments>https://lobste.rs/s/szrxqe/illegal_vs_unwanted_states</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/szrxqe/illegal_vs_unwanted_states"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>formalmethods</category>
+    </item>
+    <item>
+      <title>GTFOBins</title>
+      <link>https://gtfobins.org/</link>
+      <guid>https://lobste.rs/s/5wj0a2</guid>
+      <author>gtfobins.org via indigo</author>
+      <pubDate>Tue, 28 Apr 2026 01:51:45 -0500</pubDate>
+      <comments>https://lobste.rs/s/5wj0a2/gtfobins</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/5wj0a2/gtfobins"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>security</category>
+    </item>
+    <item>
+      <title>Babylon and the Square Root of 2 (2011)</title>
+      <link>https://johncarlosbaez.wordpress.com/2011/12/02/babylon-and-the-square-root-of-2/</link>
+      <guid>https://lobste.rs/s/ywatcf</guid>
+      <author>johncarlosbaez.wordpress.com via Corbin</author>
+      <pubDate>Tue, 28 Apr 2026 09:18:35 -0500</pubDate>
+      <comments>https://lobste.rs/s/ywatcf/babylon_square_root_2_2011</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/ywatcf/babylon_square_root_2_2011"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>math</category>
+      <category>historical</category>
+    </item>
+    <item>
+      <title>How I Broke the Anti-Bot Behind Nike, Kick, and Twitch</title>
+      <link>https://emro.cat/blog/how-i-broke-the-anti-bot-behind-nike-kick-and-twitch/</link>
+      <guid>https://lobste.rs/s/jpohft</guid>
+      <author>emro.cat via vaguelytagged</author>
+      <pubDate>Mon, 27 Apr 2026 20:52:15 -0500</pubDate>
+      <comments>https://lobste.rs/s/jpohft/how_i_broke_anti_bot_behind_nike_kick</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/jpohft/how_i_broke_anti_bot_behind_nike_kick"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>javascript</category>
+      <category>reversing</category>
+      <category>rust</category>
+    </item>
+    <item>
+      <title>Niri v26.04</title>
+      <link>https://github.com/niri-wm/niri/releases/tag/v26.04</link>
+      <guid>https://lobste.rs/s/uf38bg</guid>
+      <author>github.com via ana_glz</author>
+      <pubDate>Mon, 27 Apr 2026 05:51:27 -0500</pubDate>
+      <comments>https://lobste.rs/s/uf38bg/niri_v26_04</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/uf38bg/niri_v26_04"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>linux</category>
+      <category>release</category>
+      <category>rust</category>
+    </item>
+    <item>
+      <title>7 reasons I switched back to PHP after 2 years on Rails (2007)</title>
+      <link>https://sive.rs/rails2php</link>
+      <guid>https://lobste.rs/s/uhsedd</guid>
+      <author>sive.rs via ucirello</author>
+      <pubDate>Tue, 28 Apr 2026 11:45:32 -0500</pubDate>
+      <comments>https://lobste.rs/s/uhsedd/7_reasons_i_switched_back_php_after_2_years</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/uhsedd/7_reasons_i_switched_back_php_after_2_years"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>ruby</category>
+      <category>php</category>
+    </item>
+    <item>
+      <title>I won my FOIA against Twelve South to open up the electrical information for the PlugBug 120W</title>
+      <link>https://archive.org/details/pb120-us</link>
+      <guid>https://lobste.rs/s/kxnxyv</guid>
+      <author>archive.org by reesericci</author>
+      <pubDate>Mon, 27 Apr 2026 10:47:31 -0500</pubDate>
+      <comments>https://lobste.rs/s/kxnxyv/i_won_my_foia_against_twelve_south_open_up</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/kxnxyv/i_won_my_foia_against_twelve_south_open_up"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>pdf</category>
+      <category>hardware</category>
+      <category>reversing</category>
+    </item>
+    <item>
+      <title>Rust India Conference 2026 - Full Talk Recordings</title>
+      <link>http://www.youtube.com/playlist?list=PLbcv9d2YUhnbCxJmjB_4RbjUBgq6exSGs</link>
+      <guid>https://lobste.rs/s/layfq8</guid>
+      <author>youtube.com via ss</author>
+      <pubDate>Tue, 28 Apr 2026 10:58:51 -0500</pubDate>
+      <comments>https://lobste.rs/s/layfq8/rust_india_conference_2026_full_talk</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/layfq8/rust_india_conference_2026_full_talk"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>video</category>
+      <category>rust</category>
+    </item>
+    <item>
+      <title>Building a threadiverse community platform</title>
+      <link>https://fedify.dev/tutorial/threadiverse</link>
+      <guid>https://lobste.rs/s/gbgfec</guid>
+      <author>fedify.dev by hongminhee</author>
+      <pubDate>Tue, 28 Apr 2026 03:11:13 -0500</pubDate>
+      <comments>https://lobste.rs/s/gbgfec/building_threadiverse_community</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/gbgfec/building_threadiverse_community"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>web</category>
+      <category>distributed</category>
+    </item>
+    <item>
+      <title>"Why not just use Lean?"</title>
+      <link>https://lawrencecpaulson.github.io/2026/04/23/Why_not_Lean.html</link>
+      <guid>https://lobste.rs/s/d27llp</guid>
+      <author>lawrencecpaulson.github.io via priime</author>
+      <pubDate>Mon, 27 Apr 2026 11:42:24 -0500</pubDate>
+      <comments>https://lobste.rs/s/d27llp/why_not_just_use_lean</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/d27llp/why_not_just_use_lean"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>formalmethods</category>
+    </item>
+    <item>
+      <title>On the Limits of Self-Improving in Large Language Models: The Singularity Is Not Near Without Symbolic Model Synthesis</title>
+      <link>https://arxiv.org/html/2601.05280v2</link>
+      <guid>https://lobste.rs/s/jgsiqa</guid>
+      <author>arxiv.org via darccio</author>
+      <pubDate>Tue, 28 Apr 2026 11:43:54 -0500</pubDate>
+      <comments>https://lobste.rs/s/jgsiqa/on_limits_self_improving_large_language</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/jgsiqa/on_limits_self_improving_large_language"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>ai</category>
+    </item>
+    <item>
+      <title>Using Rust to Build a $1 Handheld Gaming Console</title>
+      <link>https://chrisdell.info/using-rust-to-build-a-1-dollar-handheld-gaming-console/</link>
+      <guid>https://lobste.rs/s/jl0d5b</guid>
+      <author>chrisdell.info via kianryan</author>
+      <pubDate>Mon, 27 Apr 2026 16:50:13 -0500</pubDate>
+      <comments>https://lobste.rs/s/jl0d5b/using_rust_build_1_handheld_gaming</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/jl0d5b/using_rust_build_1_handheld_gaming"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>rust</category>
+    </item>
+    <item>
+      <title>High Performance Git</title>
+      <link>https://gitperf.com/</link>
+      <guid>https://lobste.rs/s/ub60jl</guid>
+      <author>gitperf.com via heavyrain266</author>
+      <pubDate>Tue, 28 Apr 2026 03:08:52 -0500</pubDate>
+      <comments>https://lobste.rs/s/ub60jl/high_performance_git</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/ub60jl/high_performance_git"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>practices</category>
+      <category>vcs</category>
+    </item>
+    <item>
+      <title>tasty-cache: Nix-style test caching for Haskell</title>
+      <link>https://github.com/silky/tasty-cache</link>
+      <guid>https://lobste.rs/s/xaodm9</guid>
+      <author>github.com by noon</author>
+      <pubDate>Tue, 28 Apr 2026 08:22:06 -0500</pubDate>
+      <comments>https://lobste.rs/s/xaodm9/tasty_cache_nix_style_test_caching_for</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/xaodm9/tasty_cache_nix_style_test_caching_for"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>haskell</category>
+    </item>
+    <item>
+      <title>Unison: a new distributed programming language</title>
+      <link>https://www.youtube.com/watch?v=gCWtkvDQ2ZI</link>
+      <guid>https://lobste.rs/s/e8jkxr</guid>
+      <author>youtube.com via dunyakirkali</author>
+      <pubDate>Tue, 28 Apr 2026 08:52:46 -0500</pubDate>
+      <comments>https://lobste.rs/s/e8jkxr/unison_new_distributed_programming</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/e8jkxr/unison_new_distributed_programming"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>video</category>
+      <category>distributed</category>
+    </item>
+    <item>
+      <title>From Milliseconds to 26 Nanoseconds: How a $20 eBay SFP Module Beat My Entire NTP Setup</title>
+      <link>https://austinsnerdythings.com/2026/04/26/ptp-osa5401-26-nanoseconds-raspberry-pi/</link>
+      <guid>https://lobste.rs/s/trap9p</guid>
+      <author>austinsnerdythings.com via varesa</author>
+      <pubDate>Mon, 27 Apr 2026 03:55:46 -0500</pubDate>
+      <comments>https://lobste.rs/s/trap9p/from_milliseconds_26_nanoseconds_how_20</comments>
+      <description>&lt;p&gt;&lt;a href="https://lobste.rs/s/trap9p/from_milliseconds_26_nanoseconds_how_20"&gt;Comments&lt;/a&gt;&lt;/p&gt;</description>
+      <category>hardware</category>
+    </item>
+  </channel>
+</rss>
