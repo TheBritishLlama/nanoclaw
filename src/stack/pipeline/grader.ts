@@ -52,6 +52,10 @@ async function gradeOneBatch(
   const raw = await ollama.generate(model, prompt, {
     temperature: 0.2,
     num_ctx: NUM_CTX,
+    // Qwen 3's thinking mode adds minutes of latency before the first token,
+    // which trips Node's 5-min headers timeout on big batches. Grading is a
+    // simple keep/drop classification — no chain-of-thought needed.
+    think: false,
   });
   const out: Graded[] = [];
   const byUrl = new Map(items.map((i) => [i.url, i]));
@@ -91,7 +95,10 @@ export async function gradeBatch(
       out.push(...part);
     } catch (e) {
       // One bad batch shouldn't kill the whole grading run.
-      console.error(`[stack] grader batch failed (items ${i}..${i + slice.length}):`, e);
+      console.error(
+        `[stack] grader batch failed (items ${i}..${i + slice.length}):`,
+        e,
+      );
     }
   }
   return out;

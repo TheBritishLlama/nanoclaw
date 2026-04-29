@@ -93,10 +93,16 @@ export async function initStack({ db }: InitStackDeps): Promise<void> {
       ? new SearxngClient(cfg.search.searxngInstance)
       : undefined;
 
-  // Qwen 3 4B classifier closure for scouts (yes/no via /api/generate)
+  // Qwen 3 4B classifier closure for scouts (yes/no via /api/generate).
+  // Thinking mode is disabled — yes/no classification doesn't need it and
+  // it adds minutes of latency that trips Node's 5-min headers timeout.
   const classify = async (prompt: string): Promise<boolean> => {
     try {
-      const out = await ollamaClient.generate(cfg.scoutClassifierModel, prompt);
+      const out = await ollamaClient.generate(
+        cfg.scoutClassifierModel,
+        prompt,
+        { think: false },
+      );
       return /^\s*yes\b/i.test(out);
     } catch {
       return false;

@@ -26,9 +26,14 @@ export class OllamaClient {
     options: Record<string, any> = {},
   ): Promise<string> {
     // Ollama wants generation parameters nested under `options`, not at the top
-    // level. Top-level fields like `stream` stay at the root.
+    // level. A few keys (think, format, system) are top-level fields in the API
+    // and must be hoisted out of the options dict before nesting.
+    const { think, format, system, ...nestedOptions } = options;
     const body: Record<string, any> = { model, prompt, stream: false };
-    if (Object.keys(options).length > 0) body.options = options;
+    if (think !== undefined) body.think = think;
+    if (format !== undefined) body.format = format;
+    if (system !== undefined) body.system = system;
+    if (Object.keys(nestedOptions).length > 0) body.options = nestedOptions;
     const r = await this.fetcher(`${this.host}/api/generate`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
