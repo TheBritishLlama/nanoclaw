@@ -656,6 +656,24 @@ async function main(): Promise<void> {
     registeredGroups: () => registeredGroups,
   };
 
+  // Stack module init (optional — only if groups/stack/config.json exists).
+  // MUST run before channels connect so the Stack schema exists by the time
+  // any inbound poll calls maybeDispatchToStack — otherwise the first poll
+  // races against schema apply and loses the message.
+  const stackConfigPath = path.resolve('groups/stack/config.json');
+  if (fs.existsSync(stackConfigPath)) {
+    try {
+      const { initStack } = await import('./stack/index.js');
+      await initStack({ db: getDb() });
+      logger.info('Stack module initialized');
+    } catch (err) {
+      logger.error(
+        { err },
+        'Stack module failed to initialize — continuing without it',
+      );
+    }
+  }
+
   // Create and connect all registered channels.
   // Each channel self-registers via the barrel import above.
   // Factories return null when credentials are missing, so unconfigured channels are skipped.
@@ -682,21 +700,6 @@ async function main(): Promise<void> {
   if (channels.length === 0) {
     logger.fatal('No channels connected');
     process.exit(1);
-  }
-
-  // Stack module init (optional — only if groups/stack/config.json exists)
-  const stackConfigPath = path.resolve('groups/stack/config.json');
-  if (fs.existsSync(stackConfigPath)) {
-    try {
-      const { initStack } = await import('./stack/index.js');
-      await initStack({ db: getDb() });
-      logger.info('Stack module initialized');
-    } catch (err) {
-      logger.error(
-        { err },
-        'Stack module failed to initialize — continuing without it',
-      );
-    }
   }
 
   // Start subsystems (independently of connection handler)
