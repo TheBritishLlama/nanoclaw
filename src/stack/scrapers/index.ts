@@ -1,4 +1,5 @@
 import type { RawItem } from '../types.js';
+import type { SampledSource } from '../discovery/sampler.js';
 import { scrapeHN, scrapeShowHN } from './hn.js';
 import { scrapeRssFeeds } from './rss.js';
 import { scrapeReddit } from './reddit.js';
@@ -43,4 +44,26 @@ export async function runEnabledScrapers(
     }
   }));
   return results.flat();
+}
+
+export async function runSampledScrapers(
+  selected: SampledSource[],
+  registry: ScraperRegistry,
+  rssScraper: (url: string) => Promise<RawItem[]>,
+): Promise<RawItem[]> {
+  const all: RawItem[] = [];
+  await Promise.all(selected.map(async (s) => {
+    try {
+      if (s.name.startsWith('rss:')) {
+        const url = s.name.slice('rss:'.length);
+        all.push(...await rssScraper(url));
+      } else {
+        const fn = registry[s.name];
+        if (fn) all.push(...await fn());
+      }
+    } catch (e) {
+      console.error(`[stack] scraper '${s.name}' failed:`, e);
+    }
+  }));
+  return all;
 }
