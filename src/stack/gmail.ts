@@ -83,7 +83,7 @@ export async function createStackGmail(): Promise<GmailSender> {
   if (!fs.existsSync(keysPath) || !fs.existsSync(tokensPath)) {
     throw new Error(
       `Stack Gmail: credentials not found in ~/.gmail-mcp/. ` +
-      `Run /add-gmail to set them up (keysPath=${keysPath}).`,
+        `Run /add-gmail to set them up (keysPath=${keysPath}).`,
     );
   }
 

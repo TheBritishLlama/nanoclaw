@@ -98,10 +98,14 @@ export function applyStackSchema(db: Database.Database): void {
   db.exec(SCHEMA_SQL);
 }
 
-type DropInsert = Omit<Drop, 'sentAt' | 'rating' | 'ratedAt' | 'emailMessageId'>;
+type DropInsert = Omit<
+  Drop,
+  'sentAt' | 'rating' | 'ratedAt' | 'emailMessageId'
+>;
 
 export function insertQueueDrop(db: Database.Database, drop: DropInsert): void {
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO stack_queue (
       id, bucket, name, tagline, body_html, body_plain,
       source_url, source_fetched_at, tags_json, confidence,
@@ -111,14 +115,19 @@ export function insertQueueDrop(db: Database.Database, drop: DropInsert): void {
       @sourceUrl, @sourceFetchedAt, @tagsJson, @confidence,
       @status, @vaultPath, @createdAt
     )
-  `).run({ ...drop, tagsJson: JSON.stringify(drop.tags) });
+  `,
+  ).run({ ...drop, tagsJson: JSON.stringify(drop.tags) });
 }
 
 export function getQueuedDropsOldestFirst(db: Database.Database): Drop[] {
-  const rows = db.prepare(`
+  const rows = db
+    .prepare(
+      `
     SELECT * FROM stack_queue WHERE status = 'queued' ORDER BY created_at ASC
-  `).all() as any[];
-  return rows.map(r => ({
+  `,
+    )
+    .all() as any[];
+  return rows.map((r) => ({
     id: r.id,
     bucket: r.bucket,
     name: r.name,

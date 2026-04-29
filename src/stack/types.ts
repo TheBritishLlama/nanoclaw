@@ -1,15 +1,43 @@
 export type Bucket = 'tool' | 'concept' | 'lore' | 'foundation';
-export type DropStatus = 'queued' | 'pending_review' | 'sent' | 'rejected' | 'archived';
-export type FoundationStatus = 'pending' | 'enriched' | 'sent' | 'done' | 'retry' | 'archived';
+export type DropStatus =
+  | 'queued'
+  | 'pending_review'
+  | 'sent'
+  | 'rejected'
+  | 'archived';
+export type FoundationStatus =
+  | 'pending'
+  | 'enriched'
+  | 'sent'
+  | 'done'
+  | 'retry'
+  | 'archived';
 export type HealthState = 'healthy' | 'degraded' | 'recovered' | 'down';
 export type ScrapeOutcome =
-  | 'graded_keep' | 'graded_drop' | 'duplicate' | 'enriched'
-  | 'enrich_rejected' | 'unparsed_reply' | 'vault_write_failed';
+  | 'graded_keep'
+  | 'graded_drop'
+  | 'duplicate'
+  | 'enriched'
+  | 'enrich_rejected'
+  | 'unparsed_reply'
+  | 'vault_write_failed';
 
-const BUCKETS: Bucket[] = ['tool','concept','lore','foundation'];
-const DROP_STATUSES: DropStatus[] = ['queued','pending_review','sent','rejected','archived'];
-const FOUNDATION_STATUSES: FoundationStatus[] =
-  ['pending','enriched','sent','done','retry','archived'];
+const BUCKETS: Bucket[] = ['tool', 'concept', 'lore', 'foundation'];
+const DROP_STATUSES: DropStatus[] = [
+  'queued',
+  'pending_review',
+  'sent',
+  'rejected',
+  'archived',
+];
+const FOUNDATION_STATUSES: FoundationStatus[] = [
+  'pending',
+  'enriched',
+  'sent',
+  'done',
+  'retry',
+  'archived',
+];
 
 export function isBucket(s: string): s is Bucket {
   return (BUCKETS as string[]).includes(s);

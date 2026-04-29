@@ -187,8 +187,8 @@ function buildVolumeMounts(
   const gmailMount = fs.existsSync(groupGmailDir)
     ? groupGmailDir
     : isMain
-      ? gmailDir   // main group falls back to the default Jarvis outbox credentials
-      : null;      // non-main groups get no Gmail access unless explicitly provisioned
+      ? gmailDir // main group falls back to the default Jarvis outbox credentials
+      : null; // non-main groups get no Gmail access unless explicitly provisioned
   if (gmailMount && fs.existsSync(gmailMount)) {
     mounts.push({
       hostPath: gmailMount,

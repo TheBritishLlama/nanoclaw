@@ -1,7 +1,19 @@
 import type { Drop } from '../types.js';
 
-export interface RenderedEmail { subject: string; html: string; text: string; }
-export interface GmailSender { send(args: { from: string; to: string; subject: string; html: string; text: string }): Promise<{ messageId: string }>; }
+export interface RenderedEmail {
+  subject: string;
+  html: string;
+  text: string;
+}
+export interface GmailSender {
+  send(args: {
+    from: string;
+    to: string;
+    subject: string;
+    html: string;
+    text: string;
+  }): Promise<{ messageId: string }>;
+}
 
 const SUBJECT_PREFIX: Record<Drop['bucket'], string> = {
   tool: 'Stack — ',

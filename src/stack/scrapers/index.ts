@@ -16,7 +16,8 @@ export function buildDefaultRegistry(opts: {
     hn: () => scrapeHN(),
     showhn: () => scrapeShowHN(),
     lobsters: () => scrapeRssFeeds(['https://lobste.rs/rss']),
-    hackernewsletter: () => scrapeRssFeeds(['https://hackernewsletter.com/rss.xml']),
+    hackernewsletter: () =>
+      scrapeRssFeeds(['https://hackernewsletter.com/rss.xml']),
     rss: () => scrapeRssFeeds(opts.rssFeeds),
     reddit_selfhosted: () => scrapeReddit('selfhosted'),
     github_trending: () => scrapeGitHubTrending('daily'),
@@ -27,20 +28,24 @@ export function buildDefaultRegistry(opts: {
 }
 
 export async function runEnabledScrapers(
-  enabled: string[], registry: ScraperRegistry, timeoutMs = 30_000,
+  enabled: string[],
+  registry: ScraperRegistry,
+  timeoutMs = 30_000,
 ): Promise<RawItem[]> {
-  const results = await Promise.all(enabled.map(async name => {
-    const fn = registry[name];
-    if (!fn) return [];
-    try {
-      const timeout = new Promise<RawItem[]>((_, rej) =>
-        setTimeout(() => rej(new Error(`timeout ${name}`)), timeoutMs)
-      );
-      return await Promise.race([fn(), timeout]);
-    } catch (e) {
-      console.error(`[stack] scraper ${name} failed:`, e);
-      return [];
-    }
-  }));
+  const results = await Promise.all(
+    enabled.map(async (name) => {
+      const fn = registry[name];
+      if (!fn) return [];
+      try {
+        const timeout = new Promise<RawItem[]>((_, rej) =>
+          setTimeout(() => rej(new Error(`timeout ${name}`)), timeoutMs),
+        );
+        return await Promise.race([fn(), timeout]);
+      } catch (e) {
+        console.error(`[stack] scraper ${name} failed:`, e);
+        return [];
+      }
+    }),
+  );
   return results.flat();
 }

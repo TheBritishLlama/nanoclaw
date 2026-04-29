@@ -119,7 +119,6 @@ function createSchema(database: Database.Database): void {
     /* column already exists */
   }
 
-
   // Add channel and is_group columns if they don't exist (migration for existing DBs)
   try {
     database.exec(`ALTER TABLE chats ADD COLUMN channel TEXT`);
@@ -353,7 +352,6 @@ export function getActiveGmailThreadJids(since: string): string[] {
     (r) => r.chat_jid,
   );
 }
-
 
 export function getMessagesSince(
   chatJid: string,

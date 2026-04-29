@@ -17,29 +17,45 @@ function loadTemplate(bucket: Drop['bucket']): string {
 }
 
 function mdToHtml(md: string): string {
-  return md
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/^/, '<p>') + '</p>';
+  return (
+    md
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/^/, '<p>') + '</p>'
+  );
 }
 
 export async function enrich(
-  haiku: HaikuClient, webFetch: WebFetcher, graded: Graded,
+  haiku: HaikuClient,
+  webFetch: WebFetcher,
+  graded: Graded,
 ): Promise<Drop | null> {
   if (!graded.keep || !graded.bucket) return null;
   let source: string;
-  try { source = (await webFetch(graded.raw.url)).slice(0, 6000); }
-  catch { return null; }
+  try {
+    source = (await webFetch(graded.raw.url)).slice(0, 6000);
+  } catch {
+    return null;
+  }
   const tmpl = loadTemplate(graded.bucket)
     .replace('{{URL}}', graded.raw.url)
     .replace('{{SOURCE}}', source);
   const raw = await haiku.complete(tmpl);
-  let parsed: { name: string; tagline: string; body: string; tags: string[]; groundable: boolean };
-  try { parsed = JSON.parse(raw); }
-  catch { return null; }
+  let parsed: {
+    name: string;
+    tagline: string;
+    body: string;
+    tags: string[];
+    groundable: boolean;
+  };
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
   if (!parsed.groundable) return null;
   return {
-    id: `drop_${Date.now()}_${randomUUID().slice(0,8)}`,
+    id: `drop_${Date.now()}_${randomUUID().slice(0, 8)}`,
     bucket: graded.bucket,
     name: parsed.name,
     tagline: parsed.tagline,
