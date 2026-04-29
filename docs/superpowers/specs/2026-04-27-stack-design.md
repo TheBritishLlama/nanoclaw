@@ -350,6 +350,32 @@ When a candidate domain reaches `occurrence_count ≥ 3`, attempt to find its RS
 
 Source scrapers run as a single nightly job (`stack-scrape`); scouts run as a weekly job (`stack-scout`). Scrapers run in parallel with 30s per-source timeout. Failures are logged and don't block other sources.
 
+#### 2.8 Reader-mode HTML extraction (shared infrastructure)
+
+The Enricher (§4) needs the article body of each source URL — not the navigation, sidebar, or scripts. Without preprocessing, fetching a Wikipedia page returns ~50–100 KB of HTML in which the first 6000 characters are mostly `<head>`, schema markup, navigation, and table-of-contents — the actual article body starts much later. Haiku then sees no facts to ground on and returns `groundable: false`. This was caught during smoke-2 testing of Foundations (5/5 attempts failed against Wikipedia URLs).
+
+To fix this, the Enricher runs fetched HTML through a reader-mode extractor before slicing:
+
+1. Fetch the URL → raw HTML string.
+2. Run through **Mozilla Readability** (`@mozilla/readability`) inside a **JSDOM** document. Readability is the same algorithm Firefox's Reader View uses; it isolates the main article content and strips chrome.
+3. If extraction succeeds and the resulting `textContent` is ≥200 characters, slice that to 6000 characters and pass to Haiku.
+4. If extraction fails or yields a too-short result (likely not an article — e.g., GitHub repo page, Product Hunt listing, blog index), fall back to slicing the raw HTML — preserving Plan 1 behavior so this is a strict improvement, not a regression.
+
+Both `@mozilla/readability` and `jsdom` are well-maintained npm packages with stable APIs. JSDOM is the heavier of the two (~1 MB compressed) but is required by Readability and is only loaded inside the enricher path; it does not affect Stack startup time.
+
+The extractor lives in `src/stack/pipeline/reader.ts` as a small helper:
+
+```ts
+export interface ExtractedArticle {
+  title: string | null;
+  textContent: string;
+  length: number;
+}
+export function extractReadable(html: string, url: string): ExtractedArticle | null;
+```
+
+This change is shared by both Foundations enrichment and discovered-drop enrichment; both previously suffered from the same slice-cuts-off-the-article failure mode for any HTML-heavy source.
+
 ### 3. Grader (Qwen via Ollama)
 
 Input: `RawItem[]` (deduped against corpus by URL).
