@@ -35,18 +35,20 @@ function unwrapJsonFences(raw: string): string {
   return fenced ? fenced[1].trim() : trimmed;
 }
 
+/**
+ * Throws on transient failures (network, JSON parse) so callers can distinguish
+ * "retry this URL on the next run" from "this URL is genuinely ungroundable
+ * and should be marked done." Returns null only when Haiku says
+ * groundable: false on a well-formed JSON response.
+ */
 export async function enrich(
   haiku: HaikuClient,
   webFetch: WebFetcher,
   graded: Graded,
 ): Promise<Drop | null> {
   if (!graded.keep || !graded.bucket) return null;
-  let html: string;
-  try {
-    html = await webFetch(graded.raw.url);
-  } catch {
-    return null;
-  }
+  // Network / fetch errors propagate as exceptions — caller decides retry.
+  const html = await webFetch(graded.raw.url);
   const extracted = extractReadable(html, graded.raw.url);
   const source = (extracted?.textContent ?? html).slice(0, 6000);
   const tmpl = loadTemplate(graded.bucket)
@@ -62,8 +64,12 @@ export async function enrich(
   };
   try {
     parsed = JSON.parse(unwrapJsonFences(raw));
-  } catch {
-    return null;
+  } catch (e) {
+    // Malformed Haiku output is transient (model variance) — let the caller
+    // decide whether to retry rather than silently dropping the item.
+    throw new Error(
+      `Haiku returned non-JSON for ${graded.raw.url}: ${(e as Error).message}`,
+    );
   }
   if (!parsed.groundable) return null;
   return {

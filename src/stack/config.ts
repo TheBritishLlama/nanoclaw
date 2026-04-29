@@ -46,6 +46,8 @@ export interface StackConfig {
   confidenceThreshold: number;
   reviewApproveThreshold: number;
   queueMinDepth: number;
+  /** Number of drops bundled into a single delivery email. Default 3. */
+  dropsPerEmail?: number;
   graderModel: string;
   scoutClassifierModel: string;
   enricherModel: string;
@@ -83,6 +85,14 @@ function validate(cfg: StackConfig): void {
   if (cfg.reviewApproveThreshold < 1 || cfg.reviewApproveThreshold > 10) {
     throw new Error(
       `reviewApproveThreshold must be 1..10, got ${cfg.reviewApproveThreshold}`,
+    );
+  }
+  if (
+    cfg.dropsPerEmail !== undefined &&
+    (cfg.dropsPerEmail < 1 || cfg.dropsPerEmail > 10)
+  ) {
+    throw new Error(
+      `dropsPerEmail must be 1..10, got ${cfg.dropsPerEmail}`,
     );
   }
 

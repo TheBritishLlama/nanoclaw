@@ -92,9 +92,16 @@ export async function gradeBatch(
   const out: Graded[] = [];
   for (let i = 0; i < items.length; i += BATCH_SIZE) {
     const slice = items.slice(i, i + BATCH_SIZE);
+    const t0 = Date.now();
     try {
       const part = await gradeOneBatch(ollama, model, slice, ctx);
       out.push(...part);
+      const took = Math.round((Date.now() - t0) / 1000);
+      // Surface per-batch outcome so it's obvious when a batch returned 0
+      // valid items (e.g., malformed Qwen output) vs. when one fails outright.
+      console.log(
+        `[stack] grader batch ${i}..${i + slice.length}: ${part.length}/${slice.length} parsed in ${took}s`,
+      );
     } catch (e) {
       // One bad batch shouldn't kill the whole grading run.
       console.error(

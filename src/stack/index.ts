@@ -15,8 +15,8 @@ import { buildDefaultRegistry, runEnabledScrapers } from './scrapers/index.js';
 import { gradeBatch } from './pipeline/grader.js';
 import { enrich } from './pipeline/enricher.js';
 import { persistDrop } from './pipeline/confidence-gate.js';
-import { pickNextDrop, markSent } from './pipeline/picker.js';
-import { sendDropEmail } from './delivery/outbound.js';
+import { pickNextDrops, markManySent } from './pipeline/picker.js';
+import { sendMultiDropEmail } from './delivery/outbound.js';
 import {
   seedFoundations,
   ensureMinFoundationsInQueue,
@@ -193,6 +193,7 @@ export async function initStack({ db }: InitStackDeps): Promise<void> {
           g,
         );
         if (!drop) {
+          // Legit ungroundable per Haiku — mark done so we don't retry.
           recordScrapeOutcomes(
             db,
             [
@@ -213,6 +214,8 @@ export async function initStack({ db }: InitStackDeps): Promise<void> {
           nowIso,
         );
       } catch (e) {
+        // Transient — don't record an outcome; the URL is NOT in scrape_log
+        // as terminal, so a future scrape run will surface it again.
         console.error(`[stack] enrich failed for ${g.raw.url}:`, e);
       }
     }
@@ -254,23 +257,30 @@ export async function initStack({ db }: InitStackDeps): Promise<void> {
     );
   });
 
-  // Helper: pick and deliver one drop
-  const deliverOneDrop = async () => {
-    const drop = pickNextDrop(db, {
+  // Helper: pick and deliver a multi-drop email (cfg.dropsPerEmail topics in
+  // one email, with sources consolidated at the bottom).
+  const dropsPerEmail = cfg.dropsPerEmail ?? 3;
+  const deliverOneEmail = async () => {
+    const drops = pickNextDrops(db, dropsPerEmail, {
       rng: Math.random,
       foundationsMixRatio: cfg.foundationsMixRatio,
       bucketWeights: cfg.bucketWeights,
     });
-    if (!drop) return;
-    const messageId = await sendDropEmail(gmail, addrs, drop);
-    markSent(db, drop.id, new Date().toISOString(), messageId);
+    if (drops.length === 0) return;
+    const messageId = await sendMultiDropEmail(gmail, addrs, drops);
+    markManySent(
+      db,
+      drops.map((d) => d.id),
+      new Date().toISOString(),
+      messageId,
+    );
   };
 
   // Crons 2–4: three delivery windows derived from config
   const [t1, t2, t3] = cfg.deliveryTimes;
-  scheduler.addCron('stack-deliver-' + t1, timeToCron(t1), deliverOneDrop);
-  scheduler.addCron('stack-deliver-' + t2, timeToCron(t2), deliverOneDrop);
-  scheduler.addCron('stack-deliver-' + t3, timeToCron(t3), deliverOneDrop);
+  scheduler.addCron('stack-deliver-' + t1, timeToCron(t1), deliverOneEmail);
+  scheduler.addCron('stack-deliver-' + t2, timeToCron(t2), deliverOneEmail);
+  scheduler.addCron('stack-deliver-' + t3, timeToCron(t3), deliverOneEmail);
 
   // Cron 5: Ollama watchdog every 15 minutes
   scheduler.addCron('stack-ollama-watchdog', '*/15 * * * *', async () => {

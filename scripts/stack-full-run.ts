@@ -37,8 +37,8 @@ import {
 import { gradeBatch } from '../src/stack/pipeline/grader.js';
 import { enrich } from '../src/stack/pipeline/enricher.js';
 import { persistDrop } from '../src/stack/pipeline/confidence-gate.js';
-import { pickNextDrop, markSent } from '../src/stack/pipeline/picker.js';
-import { sendDropEmail } from '../src/stack/delivery/outbound.js';
+import { pickNextDrops, markManySent } from '../src/stack/pipeline/picker.js';
+import { sendMultiDropEmail } from '../src/stack/delivery/outbound.js';
 import {
   ensureMinFoundationsInQueue,
   seedFoundations,
@@ -196,15 +196,31 @@ async function main() {
       );
       if (drop) {
         persistDrop(db, cfg.vaultPath, drop);
+        recordScrapeOutcomes(
+          db,
+          [{ source: g.raw.source, url: g.raw.url, outcome: 'enriched' }],
+          nowIso,
+        );
+        deleteGradedPending(db, g.raw.url);
         enriched++;
       } else {
+        // Legit ungroundable — record so dedup knows we're done with this URL.
+        recordScrapeOutcomes(
+          db,
+          [
+            {
+              source: g.raw.source,
+              url: g.raw.url,
+              outcome: 'enrich_rejected',
+            },
+          ],
+          nowIso,
+        );
+        deleteGradedPending(db, g.raw.url);
         rejected++;
       }
-      // Successfully processed (drop or null) — clear from pending so we don't
-      // re-attempt this URL on the next run.
-      deleteGradedPending(db, g.raw.url);
     } catch (e) {
-      // Leave the row in place so a future run can retry it.
+      // Transient — leave row in pending so the next run retries this URL.
       errored++;
       console.error(`[stack] enrich failed for ${g.raw.url}:`, e);
     }
@@ -307,19 +323,27 @@ async function main() {
   });
   log('  promotion pass complete');
 
-  // ============== Stage 8: DELIVER ONE DROP ==============
-  log('Stage 8 — picking and sending one drop email');
-  const drop = pickNextDrop(db, {
+  // ============== Stage 8: DELIVER ONE MULTI-DROP EMAIL ==============
+  log('Stage 8 — picking and sending one multi-drop email');
+  const dropsPerEmail = cfg.dropsPerEmail ?? 3;
+  const drops = pickNextDrops(db, dropsPerEmail, {
     rng: Math.random,
     foundationsMixRatio: cfg.foundationsMixRatio,
     bucketWeights: cfg.bucketWeights,
   });
-  if (!drop) {
-    log('  no drop available to send (queue empty)');
+  if (drops.length === 0) {
+    log('  no drops available to send (queue empty)');
   } else {
-    log(`  sending: ${drop.bucket}/${drop.name}`);
-    const messageId = await sendDropEmail(gmail, addrs, drop);
-    markSent(db, drop.id, new Date().toISOString(), messageId);
+    log(
+      `  sending ${drops.length} drops: ${drops.map((d) => `${d.bucket}/${d.name}`).join(', ')}`,
+    );
+    const messageId = await sendMultiDropEmail(gmail, addrs, drops);
+    markManySent(
+      db,
+      drops.map((d) => d.id),
+      new Date().toISOString(),
+      messageId,
+    );
     log(`  sent — message id ${messageId}`);
   }
 

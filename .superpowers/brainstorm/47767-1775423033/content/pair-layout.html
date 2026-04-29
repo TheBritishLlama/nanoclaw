@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pair — UI Layout Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-app: #1e1e2e;
+    --bg-panel: #181825;
+    --bg-input: #11111b;
+    --bg-hover: #313244;
+    --bg-diff-add: rgba(166, 227, 161, 0.12);
+    --bg-diff-del: rgba(243, 139, 168, 0.12);
+    --bg-checkpoint: #45475a;
+    --bg-checkpoint-active: #cba6f7;
+    --border: #313244;
+    --text: #cdd6f4;
+    --text-dim: #6c7086;
+    --text-bright: #f5f5f5;
+    --accent: #cba6f7;
+    --accent-dim: rgba(203, 166, 247, 0.2);
+    --green: #a6e3a1;
+    --red: #f38ba8;
+    --yellow: #f9e2af;
+    --blue: #89b4fa;
+    --peach: #fab387;
+    --teal: #94e2d5;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --radius: 8px;
+    --radius-sm: 4px;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg-app);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* Title bar */
+  .titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 38px;
+    background: var(--bg-input);
+    border-bottom: 1px solid var(--border);
+    padding: 0 12px;
+    -webkit-app-region: drag;
+  }
+  .titlebar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .titlebar-logo {
+    width: 18px;
+    height: 18px;
+    background: var(--accent);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 10px;
+    color: var(--bg-app);
+  }
+  .titlebar-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .titlebar-project {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-left: 4px;
+  }
+  .titlebar-controls {
+    display: flex;
+    gap: 8px;
+  }
+  .titlebar-btn {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+  }
+  .titlebar-btn.minimize { background: var(--yellow); }
+  .titlebar-btn.maximize { background: var(--green); }
+  .titlebar-btn.close { background: var(--red); }
+
+  /* Main layout */
+  .main-layout {
+    display: flex;
+    height: calc(100vh - 38px - 80px - 36px);
+  }
+
+  /* Panel base */
+  .panel {
+    border: 1px solid var(--border);
+    background: var(--bg-panel);
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+    background: var(--bg-input);
+    flex-shrink: 0;
+  }
+  .panel-header .badge {
+    background: var(--accent-dim);
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  /* Left column — Chat */
+  .col-left {
+    width: 340px;
+    min-width: 280px;
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+    gap: 4px;
+  }
+
+  /* Center column — Diff + Activity */
+  .col-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 4px 0;
+    gap: 4px;
+  }
+
+  /* Right column — Files + Sub-agents */
+  .col-right {
+    width: 240px;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+    gap: 4px;
+  }
+
+  /* Resize handle */
+  .resize-handle {
+    width: 4px;
+    cursor: col-resize;
+    background: transparent;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .resize-handle:hover {
+    background: var(--accent);
+  }
+
+  /* Chat panel */
+  .chat-panel { flex: 1; }
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+  }
+  .message {
+    margin-bottom: 16px;
+  }
+  .message-role {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .message-role.assistant { color: var(--accent); }
+  .message-role.user { color: var(--blue); }
+  .message-content {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .message-content code {
+    background: var(--bg-hover);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--accent);
+    font-size: 12px;
+    padding: 4px 0;
+  }
+  .typing-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse {
+    0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1); }
+  }
+
+  /* Chat input */
+  .chat-input-wrap {
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .chat-input {
+    display: flex;
+    align-items: center;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .chat-input input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--font-sans);
+    outline: none;
+  }
+  .chat-input input::placeholder { color: var(--text-dim); }
+  .send-btn {
+    background: var(--accent);
+    border: none;
+    color: var(--bg-app);
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  /* Diff preview */
+  .diff-panel { flex: 1.2; }
+  .diff-file-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--bg-input);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .diff-file-icon { color: var(--blue); }
+  .diff-code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.7;
+    padding: 0;
+  }
+  .diff-line {
+    display: flex;
+    padding: 0 12px;
+  }
+  .diff-line-num {
+    width: 40px;
+    text-align: right;
+    padding-right: 12px;
+    color: var(--text-dim);
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .diff-line-content {
+    flex: 1;
+    white-space: pre;
+  }
+  .diff-line.add {
+    background: var(--bg-diff-add);
+  }
+  .diff-line.add .diff-line-content { color: var(--green); }
+  .diff-line.del {
+    background: var(--bg-diff-del);
+  }
+  .diff-line.del .diff-line-content { color: var(--red); }
+  .diff-line.context .diff-line-content { color: var(--text-dim); }
+  .diff-actions {
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-input);
+  }
+  .diff-btn {
+    padding: 5px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    transition: all 0.15s;
+  }
+  .diff-btn.accept {
+    background: rgba(166, 227, 161, 0.15);
+    color: var(--green);
+    border-color: rgba(166, 227, 161, 0.3);
+  }
+  .diff-btn.accept:hover { background: rgba(166, 227, 161, 0.25); }
+  .diff-btn.reject {
+    background: rgba(243, 139, 168, 0.1);
+    color: var(--red);
+    border-color: rgba(243, 139, 168, 0.2);
+  }
+  .diff-btn.reject:hover { background: rgba(243, 139, 168, 0.2); }
+  .diff-btn.accept-all {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-color: rgba(203, 166, 247, 0.3);
+  }
+  .diff-btn.open-zed {
+    background: transparent;
+    color: var(--text-dim);
+    margin-left: auto;
+  }
+  .diff-btn.open-zed:hover { color: var(--text); }
+
+  /* Activity feed */
+  .activity-panel { flex: 0.8; }
+  .activity-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-family: var(--font-mono);
+  }
+  .activity-item:hover { background: var(--bg-hover); }
+  .activity-icon {
+    width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .activity-tool {
+    color: var(--blue);
+    font-weight: 600;
+    width: 44px;
+    flex-shrink: 0;
+  }
+  .activity-target {
+    color: var(--text);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .activity-status { flex-shrink: 0; }
+
+  /* Files panel */
+  .files-panel { flex: 1; }
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .file-item:hover { background: var(--bg-hover); }
+  .file-icon { width: 16px; text-align: center; }
+  .file-name {
+    flex: 1;
+    font-family: var(--font-mono);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .file-status { flex-shrink: 0; font-size: 11px; }
+
+  /* Sub-agents panel */
+  .agents-panel { flex: 1; }
+  .agent-item {
+    padding: 8px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    margin-bottom: 6px;
+  }
+  .agent-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .agent-name {
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .agent-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+  .agent-dot.active { background: var(--green); animation: pulse 2s infinite; }
+  .agent-dot.waiting { background: var(--yellow); }
+  .agent-template {
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--bg-hover);
+    padding: 1px 6px;
+    border-radius: 8px;
+  }
+  .agent-progress-bar {
+    height: 4px;
+    background: var(--bg-hover);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .agent-progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+  .agent-progress-fill.active { background: var(--green); }
+  .agent-progress-fill.waiting { background: var(--yellow); width: 0%; }
+  .agent-task {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* Checkpoint timeline */
+  .checkpoint-bar {
+    height: 80px;
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 8px 16px;
+  }
+  .checkpoint-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .checkpoint-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+  }
+  .checkpoint-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .checkpoint-actions button {
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: var(--font-sans);
+  }
+  .checkpoint-actions button:hover {
+    color: var(--text);
+    border-color: var(--accent);
+  }
+  .timeline {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    position: relative;
+    padding: 0 8px;
+  }
+  .timeline-line {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    height: 2px;
+    background: var(--border);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .timeline-line-filled {
+    position: absolute;
+    left: 8px;
+    height: 2px;
+    background: var(--accent);
+    top: 50%;
+    transform: translateY(-50%);
+    width: 75%;
+  }
+  .checkpoint-node {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+  }
+  .checkpoint-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    background: var(--bg-app);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .checkpoint-dot.filled {
+    background: var(--accent);
+  }
+  .checkpoint-dot.current {
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+  .checkpoint-dot.future {
+    border-color: var(--border);
+  }
+  .checkpoint-dot:hover {
+    transform: scale(1.3);
+  }
+  .checkpoint-name {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    white-space: nowrap;
+  }
+
+  /* Thread bar */
+  .thread-bar {
+    height: 36px;
+    background: var(--bg-input);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    font-size: 12px;
+  }
+  .thread-current {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text);
+    font-weight: 600;
+  }
+  .thread-current .arrow { color: var(--text-dim); font-size: 10px; }
+  .thread-separator {
+    width: 1px;
+    height: 18px;
+    background: var(--border);
+  }
+  .thread-group {
+    color: var(--text-dim);
+    cursor: pointer;
+  }
+  .thread-group:hover { color: var(--text); }
+  .thread-group span { color: var(--accent); font-weight: 600; }
+
+  /* Status indicators */
+  .status-working {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--accent-dim);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Syntax highlighting colors */
+  .syn-keyword { color: var(--accent); }
+  .syn-function { color: var(--blue); }
+  .syn-string { color: var(--green); }
+  .syn-type { color: var(--yellow); }
+  .syn-comment { color: var(--text-dim); font-style: italic; }
+  .syn-variable { color: var(--text); }
+  .syn-number { color: var(--peach); }
+  .syn-operator { color: var(--teal); }
+</style>
+</head>
+<body>
+
+<!-- Title Bar -->
+<div class="titlebar">
+  <div class="titlebar-left">
+    <div class="titlebar-logo">P</div>
+    <span class="titlebar-title">Pair</span>
+    <span class="titlebar-project">— my-saas-app</span>
+  </div>
+  <div class="titlebar-controls">
+    <button class="titlebar-btn minimize"></button>
+    <button class="titlebar-btn maximize"></button>
+    <button class="titlebar-btn close"></button>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-layout">
+
+  <!-- Left: Chat -->
+  <div class="col-left">
+    <div class="panel chat-panel">
+      <div class="panel-header">
+        Chat
+        <span class="status-working"><span class="spinner"></span> Working</span>
+      </div>
+      <div class="panel-body chat-messages">
+        <div class="message">
+          <div class="message-role user">You</div>
+          <div class="message-content">Add JWT authentication middleware to protect the API routes. Use RS256 with rotating keys.</div>
+        </div>
+        <div class="message">
+          <div class="message-role assistant">Claude</div>
+          <div class="message-content">
+            I'll add JWT authentication with RS256 and key rotation. Here's my plan:
+            <br><br>
+            1. Create <code>src/middleware/auth.ts</code> with JWT verification
+            <br>
+            2. Add JWKS endpoint for key rotation
+            <br>
+            3. Protect API routes in <code>src/routes/api.ts</code>
+            <br>
+            4. Add tests for auth flow
+            <br><br>
+            Let me start with the middleware...
+          </div>
+        </div>
+        <div class="typing-indicator">
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          Editing src/middleware/auth.ts
+        </div>
+      </div>
+      <div class="chat-input-wrap">
+        <div class="chat-input">
+          <input type="text" placeholder="Ask Claude anything..." />
+          <button class="send-btn">↑</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="resize-handle"></div>
+
+  <!-- Center: Diff + Activity -->
+  <div class="col-center">
+    <div class="panel diff-panel">
+      <div class="panel-header">
+        Diff Preview
+        <span class="badge">1 pending</span>
+      </div>
+      <div class="diff-file-tab">
+        <span class="diff-file-icon">📄</span>
+        src/middleware/auth.ts
+        <span style="color: var(--green); margin-left: auto; font-size: 11px;">+24</span>
+        <span style="color: var(--red); font-size: 11px;">-3</span>
+      </div>
+      <div class="panel-body" style="padding: 0;">
+        <div class="diff-code">
+          <div class="diff-line context"><span class="diff-line-num">14</span><span class="diff-line-content"><span class="syn-keyword">import</span> { <span class="syn-variable">Request</span>, <span class="syn-variable">Response</span>, <span class="syn-variable">NextFunction</span> } <span class="syn-keyword">from</span> <span class="syn-string">'express'</span>;</span></div>
+          <div class="diff-line context"><span class="diff-line-num">15</span><span class="diff-line-content"></span></div>
+          <div class="diff-line del"><span class="diff-line-num">16</span><span class="diff-line-content"><span class="syn-keyword">export const</span> <span class="syn-function">auth</span> = (<span class="syn-variable">req</span>: <span class="syn-type">Request</span>) => {</span></div>
+          <div class="diff-line del"><span class="diff-line-num">17</span><span class="diff-line-content">  <span class="syn-keyword">return</span> <span class="syn-variable">req</span>.<span class="syn-variable">headers</span>.<span class="syn-variable">authorization</span>;</span></div>
+          <div class="diff-line del"><span class="diff-line-num">18</span><span class="diff-line-content">};</span></div>
+          <div class="diff-line add"><span class="diff-line-num">16</span><span class="diff-line-content"><span class="syn-keyword">import</span> <span class="syn-variable">jwksClient</span> <span class="syn-keyword">from</span> <span class="syn-string">'jwks-rsa'</span>;</span></div>
+          <div class="diff-line add"><span class="diff-line-num">17</span><span class="diff-line-content"><span class="syn-keyword">import</span> { <span class="syn-variable">verify</span> } <span class="syn-keyword">from</span> <span class="syn-string">'jsonwebtoken'</span>;</span></div>
+          <div class="diff-line add"><span class="diff-line-num">18</span><span class="diff-line-content"></span></div>
+          <div class="diff-line add"><span class="diff-line-num">19</span><span class="diff-line-content"><span class="syn-keyword">const</span> <span class="syn-variable">client</span> = <span class="syn-function">jwksClient</span>({</span></div>
+          <div class="diff-line add"><span class="diff-line-num">20</span><span class="diff-line-content">  <span class="syn-variable">jwksUri</span>: <span class="syn-variable">process</span>.<span class="syn-variable">env</span>.<span class="syn-variable">JWKS_URI</span> ?? <span class="syn-string">'/.well-known/jwks.json'</span>,</span></div>
+          <div class="diff-line add"><span class="diff-line-num">21</span><span class="diff-line-content">  <span class="syn-variable">cache</span>: <span class="syn-keyword">true</span>,</span></div>
+          <div class="diff-line add"><span class="diff-line-num">22</span><span class="diff-line-content">  <span class="syn-variable">rateLimit</span>: <span class="syn-keyword">true</span>,</span></div>
+          <div class="diff-line add"><span class="diff-line-num">23</span><span class="diff-line-content">});</span></div>
+          <div class="diff-line add"><span class="diff-line-num">24</span><span class="diff-line-content"></span></div>
+          <div class="diff-line add"><span class="diff-line-num">25</span><span class="diff-line-content"><span class="syn-keyword">export const</span> <span class="syn-function">authenticate</span> = <span class="syn-keyword">async</span> (</span></div>
+          <div class="diff-line add"><span class="diff-line-num">26</span><span class="diff-line-content">  <span class="syn-variable">req</span>: <span class="syn-type">Request</span>,</span></div>
+          <div class="diff-line add"><span class="diff-line-num">27</span><span class="diff-line-content">  <span class="syn-variable">res</span>: <span class="syn-type">Response</span>,</span></div>
+          <div class="diff-line add"><span class="diff-line-num">28</span><span class="diff-line-content">  <span class="syn-variable">next</span>: <span class="syn-type">NextFunction</span></span></div>
+          <div class="diff-line add"><span class="diff-line-num">29</span><span class="diff-line-content">) <span class="syn-keyword">=></span> {</span></div>
+          <div class="diff-line add"><span class="diff-line-num">30</span><span class="diff-line-content">  <span class="syn-keyword">const</span> <span class="syn-variable">token</span> = <span class="syn-variable">req</span>.<span class="syn-variable">headers</span>.<span class="syn-variable">authorization</span>?.<span class="syn-function">split</span>(<span class="syn-string">' '</span>)[<span class="syn-number">1</span>];</span></div>
+          <div class="diff-line context"><span class="diff-line-num">31</span><span class="diff-line-content"></span></div>
+          <div class="diff-line context"><span class="diff-line-num">32</span><span class="diff-line-content">  <span class="syn-comment">// Verify token with rotating JWKS keys</span></span></div>
+        </div>
+      </div>
+      <div class="diff-actions">
+        <button class="diff-btn accept">✓ Accept</button>
+        <button class="diff-btn reject">✗ Reject</button>
+        <button class="diff-btn accept-all">Accept All</button>
+        <button class="diff-btn open-zed">Open in Zed ↗</button>
+      </div>
+    </div>
+
+    <div class="panel activity-panel">
+      <div class="panel-header">
+        Activity Feed
+        <span class="badge">live</span>
+      </div>
+      <div class="panel-body">
+        <div class="activity-item">
+          <span class="activity-icon">✓</span>
+          <span class="activity-tool">Read</span>
+          <span class="activity-target">src/routes/api.ts</span>
+          <span class="activity-status" style="color: var(--green);">done</span>
+        </div>
+        <div class="activity-item">
+          <span class="activity-icon">✓</span>
+          <span class="activity-tool">Read</span>
+          <span class="activity-target">src/middleware/auth.ts</span>
+          <span class="activity-status" style="color: var(--green);">done</span>
+        </div>
+        <div class="activity-item">
+          <span class="activity-icon">✓</span>
+          <span class="activity-tool">Read</span>
+          <span class="activity-target">package.json</span>
+          <span class="activity-status" style="color: var(--green);">done</span>
+        </div>
+        <div class="activity-item" style="background: var(--accent-dim);">
+          <span class="activity-icon"><span class="spinner" style="width:12px;height:12px;border-width:1.5px;"></span></span>
+          <span class="activity-tool" style="color: var(--accent);">Edit</span>
+          <span class="activity-target">src/middleware/auth.ts</span>
+          <span class="activity-status" style="color: var(--yellow);">pending</span>
+        </div>
+        <div class="activity-item" style="opacity: 0.5;">
+          <span class="activity-icon">○</span>
+          <span class="activity-tool">Bash</span>
+          <span class="activity-target">npm test</span>
+          <span class="activity-status" style="color: var(--text-dim);">queued</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="resize-handle"></div>
+
+  <!-- Right: Files + Sub-agents -->
+  <div class="col-right">
+    <div class="panel files-panel">
+      <div class="panel-header">
+        Files Touched
+        <span class="badge">4</span>
+      </div>
+      <div class="panel-body">
+        <div class="file-item">
+          <span class="file-icon" style="color: var(--green);">✓</span>
+          <span class="file-name">src/middleware/auth.ts</span>
+          <span class="file-status" style="color: var(--green);">+24 -3</span>
+        </div>
+        <div class="file-item">
+          <span class="file-icon" style="color: var(--yellow);">🔧</span>
+          <span class="file-name">src/routes/api.ts</span>
+          <span class="file-status" style="color: var(--text-dim);">pending</span>
+        </div>
+        <div class="file-item">
+          <span class="file-icon" style="color: var(--text-dim);">⏳</span>
+          <span class="file-name">src/config/jwks.ts</span>
+          <span class="file-status" style="color: var(--text-dim);">queued</span>
+        </div>
+        <div class="file-item">
+          <span class="file-icon" style="color: var(--text-dim);">⏳</span>
+          <span class="file-name">tests/auth.test.ts</span>
+          <span class="file-status" style="color: var(--text-dim);">queued</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel agents-panel">
+      <div class="panel-header">
+        Sub-Agents
+        <span class="badge">2</span>
+      </div>
+      <div class="panel-body">
+        <div class="agent-item">
+          <div class="agent-header">
+            <span class="agent-name">
+              <span class="agent-dot active"></span>
+              test-writer
+            </span>
+            <span class="agent-template">Write Tests</span>
+          </div>
+          <div class="agent-progress-bar">
+            <div class="agent-progress-fill active" style="width: 60%;"></div>
+          </div>
+          <div class="agent-task">Writing auth middleware tests...</div>
+        </div>
+        <div class="agent-item">
+          <div class="agent-header">
+            <span class="agent-name">
+              <span class="agent-dot waiting"></span>
+              security-reviewer
+            </span>
+            <span class="agent-template">Security Audit</span>
+          </div>
+          <div class="agent-progress-bar">
+            <div class="agent-progress-fill waiting"></div>
+          </div>
+          <div class="agent-task">Waiting for auth changes to complete...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Checkpoint Timeline -->
+<div class="checkpoint-bar">
+  <div class="checkpoint-header">
+    <span class="checkpoint-label">Checkpoints</span>
+    <div class="checkpoint-actions">
+      <button>↩ Rewind</button>
+      <button>⑂ Branch</button>
+      <button>⟺ Compare</button>
+    </div>
+  </div>
+  <div class="timeline">
+    <div class="timeline-line"></div>
+    <div class="timeline-line-filled"></div>
+    <div class="checkpoint-node">
+      <div class="checkpoint-dot filled"></div>
+      <span class="checkpoint-name">Initial</span>
+    </div>
+    <div class="checkpoint-node">
+      <div class="checkpoint-dot filled"></div>
+      <span class="checkpoint-name">Read files</span>
+    </div>
+    <div class="checkpoint-node">
+      <div class="checkpoint-dot filled"></div>
+      <span class="checkpoint-name">Add deps</span>
+    </div>
+    <div class="checkpoint-node">
+      <div class="checkpoint-dot current"></div>
+      <span class="checkpoint-name">Auth MW</span>
+    </div>
+    <div class="checkpoint-node">
+      <div class="checkpoint-dot future"></div>
+      <span class="checkpoint-name">Routes</span>
+    </div>
+    <div class="checkpoint-node">
+      <div class="checkpoint-dot future"></div>
+      <span class="checkpoint-name">Tests</span>
+    </div>
+  </div>
+</div>
+
+<!-- Thread Bar -->
+<div class="thread-bar">
+  <div class="thread-current">
+    ● Add JWT Auth
+    <span class="arrow">▼</span>
+  </div>
+  <div class="thread-separator"></div>
+  <div class="thread-group">Today <span>(3)</span></div>
+  <div class="thread-group">Yesterday <span>(5)</span></div>
+  <div class="thread-group">This Week <span>(12)</span></div>
+  <div style="margin-left: auto; color: var(--text-dim); font-size: 11px;">
+    Claude Opus 4.6 · 3.2k tokens
+  </div>
+</div>
+
+</body>
+</html>

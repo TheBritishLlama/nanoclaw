@@ -9,6 +9,7 @@
   "confidenceThreshold": 0.7,
   "reviewApproveThreshold": 6,
   "queueMinDepth": 10,
+  "dropsPerEmail": 3,
   "graderModel": "qwen3:14b",
   "scoutClassifierModel": "qwen3:4b",
   "enricherModel": "claude-haiku-4-5-20251001",
@@ -39,7 +40,7 @@
     { "name": "scout_E_searxng_topic",    "enabled": true, "schedule": "0 4 * * 0" }
   ],
   "discovery": {
-    "domainBloomlist": ["github.com","youtube.com","twitter.com","x.com","wikipedia.org","reddit.com","medium.com","substack.com"],
+    "domainBloomlist": ["github.com","youtube.com","twitter.com","x.com","wikipedia.org","reddit.com","medium.com","substack.com","news.ycombinator.com","ycombinator.com","lobste.rs","hn.algolia.com","arxiv.org","bloomberg.com","web.archive.org","jobs.ashbyhq.com"],
     "genericAlgorithmWindowDays": 30,
     "genericAlgorithmMinRecentMentions": 5,
     "genericAlgorithmMinDistinctSources": 2,

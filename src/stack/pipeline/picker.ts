@@ -33,36 +33,79 @@ function pickBucket(rng: number, w: PickerOptions['bucketWeights']): Bucket {
   return 'lore';
 }
 
+function notInClause(excludeIds: ReadonlySet<string>): {
+  clause: string;
+  params: string[];
+} {
+  if (excludeIds.size === 0) return { clause: '', params: [] };
+  const placeholders = [...excludeIds].map(() => '?').join(',');
+  return { clause: ` AND id NOT IN (${placeholders})`, params: [...excludeIds] };
+}
+
 export function pickNextDrop(
   db: Database.Database,
   opts: PickerOptions,
+  excludeIds: ReadonlySet<string> = new Set(),
 ): Drop | null {
+  const ex = notInClause(excludeIds);
   const foundations = db
     .prepare(
-      "SELECT * FROM stack_queue WHERE status='queued' AND bucket='foundation' ORDER BY created_at ASC LIMIT 1",
+      `SELECT * FROM stack_queue WHERE status='queued' AND bucket='foundation'${ex.clause} ORDER BY created_at ASC LIMIT 1`,
     )
-    .get() as any;
+    .get(...ex.params) as any;
   const useFoundation = foundations && opts.rng() < opts.foundationsMixRatio;
   if (useFoundation) return rowToDrop(foundations);
 
   const wantedBucket = pickBucket(opts.rng(), opts.bucketWeights);
   const inBucket = db
     .prepare(
-      "SELECT * FROM stack_queue WHERE status='queued' AND bucket=? ORDER BY created_at ASC LIMIT 1",
+      `SELECT * FROM stack_queue WHERE status='queued' AND bucket=?${ex.clause} ORDER BY created_at ASC LIMIT 1`,
     )
-    .get(wantedBucket) as any;
+    .get(wantedBucket, ...ex.params) as any;
   if (inBucket) return rowToDrop(inBucket);
 
   // Fall back to oldest queued of any non-foundation bucket
   const anyBucket = db
     .prepare(
-      "SELECT * FROM stack_queue WHERE status='queued' AND bucket != 'foundation' ORDER BY created_at ASC LIMIT 1",
+      `SELECT * FROM stack_queue WHERE status='queued' AND bucket != 'foundation'${ex.clause} ORDER BY created_at ASC LIMIT 1`,
     )
-    .get() as any;
+    .get(...ex.params) as any;
   if (anyBucket) return rowToDrop(anyBucket);
 
   // Last resort: foundation if it exists
   return foundations ? rowToDrop(foundations) : null;
+}
+
+/** Pick up to `n` distinct drops via repeated weighted picks. */
+export function pickNextDrops(
+  db: Database.Database,
+  n: number,
+  opts: PickerOptions,
+): Drop[] {
+  const picked: Drop[] = [];
+  const excludeIds = new Set<string>();
+  for (let i = 0; i < n; i++) {
+    const drop = pickNextDrop(db, opts, excludeIds);
+    if (!drop) break;
+    picked.push(drop);
+    excludeIds.add(drop.id);
+  }
+  return picked;
+}
+
+export function markManySent(
+  db: Database.Database,
+  dropIds: string[],
+  sentAt: string,
+  messageId: string,
+): void {
+  const stmt = db.prepare(
+    "UPDATE stack_queue SET status='sent', sent_at=?, email_message_id=? WHERE id=?",
+  );
+  const tx = db.transaction((ids: string[]) => {
+    for (const id of ids) stmt.run(sentAt, messageId, id);
+  });
+  tx(dropIds);
 }
 
 export function markSent(
