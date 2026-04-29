@@ -49,3 +49,7 @@ groups/stack/*
 .nanoclaw/
 
 agents-sdk-docs
+
+# Stack/superpowers tooling output (brainstorm mockups, scheduler locks)
+.superpowers/
+.claude/scheduled_tasks.lock

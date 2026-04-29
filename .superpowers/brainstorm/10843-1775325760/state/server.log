@@ -1,9 +1,0 @@
-{"type":"server-started","port":64120,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:64120","screen_dir":"/home/explo/nanoclaw/.superpowers/brainstorm/10843-1775325760/content","state_dir":"/home/explo/nanoclaw/.superpowers/brainstorm/10843-1775325760/state"}
-{"type":"screen-added","file":"/home/explo/nanoclaw/.superpowers/brainstorm/10843-1775325760/content/visual-direction.html"}
-{"source":"user-event","type":"click","text":"FLOCK\n      \n        \n          S\n          \n            Pike Place Market\n            Sarah — \"finally, real food photography\"\n          \n        \n        \n          photography\n          food\n        \n      \n      \n        \n          92%\n          Sarah\n        \n        \n          78%\n          Ruth\n        \n        \n          85%\n          Jake\n        \n      \n    \n    \n      B — Modern & Sharp\n      Purple-blue gradient accents, geometric shapes, clean sans-serif. Feels like a polished SaaS product. Professional, investor-friendly.","choice":"modern","id":null,"timestamp":1775325891181}
-{"type":"screen-added","file":"/home/explo/nanoclaw/.superpowers/brainstorm/10843-1775325760/content/screen1-family-setup.html"}
-{"type":"screen-added","file":"/home/explo/nanoclaw/.superpowers/brainstorm/10843-1775325760/content/screen1-family-setup-wide.html"}
-{"type":"screen-added","file":"/home/explo/nanoclaw/.superpowers/brainstorm/10843-1775325760/content/screen2-matching-animation.html"}
-{"type":"screen-added","file":"/home/explo/nanoclaw/.superpowers/brainstorm/10843-1775325760/content/screen3-itinerary.html"}
-{"type":"screen-added","file":"/home/explo/nanoclaw/.superpowers/brainstorm/10843-1775325760/content/screen3-itinerary-v2.html"}
-{"type":"server-stopped","reason":"idle timeout"}
