@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 import type { Drop, Graded } from '../types.js';
+import { extractReadable } from './reader.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROMPT_DIR = path.join(__dirname, '../../../groups/stack/prompts');
@@ -27,9 +28,11 @@ export async function enrich(
   haiku: HaikuClient, webFetch: WebFetcher, graded: Graded,
 ): Promise<Drop | null> {
   if (!graded.keep || !graded.bucket) return null;
-  let source: string;
-  try { source = (await webFetch(graded.raw.url)).slice(0, 6000); }
+  let html: string;
+  try { html = await webFetch(graded.raw.url); }
   catch { return null; }
+  const extracted = extractReadable(html, graded.raw.url);
+  const source = (extracted?.textContent ?? html).slice(0, 6000);
   const tmpl = loadTemplate(graded.bucket)
     .replace('{{URL}}', graded.raw.url)
     .replace('{{SOURCE}}', source);
