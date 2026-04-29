@@ -17,13 +17,19 @@ export interface GraderContext {
   sourceWeightingHint: string;
 }
 
-export async function gradeBatch(
+// 25 items per batch keeps the prompt under ~6KB (~1500 tokens) so it fits
+// inside Qwen 3 14B's default 4096-token context with curator blocks attached.
+const BATCH_SIZE = 25;
+// Bumped above Ollama's default 4096 so larger curator blocks plus 25 items
+// don't get silently truncated. 8192 is safe for both 4B and 14B Qwen 3.
+const NUM_CTX = 8192;
+
+async function gradeOneBatch(
   ollama: OllamaClient,
   model: string,
   items: RawItem[],
   ctx: GraderContext,
 ): Promise<Graded[]> {
-  if (items.length === 0) return [];
   const template = fs.readFileSync(PROMPT_PATH, 'utf-8');
   const prompt = template
     .replace('{{EXEMPLAR_BLOCK}}', ctx.exemplarBlock)
@@ -43,7 +49,10 @@ export async function gradeBatch(
       ),
     );
 
-  const raw = await ollama.generate(model, prompt, { temperature: 0.2 });
+  const raw = await ollama.generate(model, prompt, {
+    temperature: 0.2,
+    num_ctx: NUM_CTX,
+  });
   const out: Graded[] = [];
   const byUrl = new Map(items.map((i) => [i.url, i]));
   for (const line of raw.split('\n')) {
@@ -62,6 +71,27 @@ export async function gradeBatch(
       });
     } catch {
       /* skip */
+    }
+  }
+  return out;
+}
+
+export async function gradeBatch(
+  ollama: OllamaClient,
+  model: string,
+  items: RawItem[],
+  ctx: GraderContext,
+): Promise<Graded[]> {
+  if (items.length === 0) return [];
+  const out: Graded[] = [];
+  for (let i = 0; i < items.length; i += BATCH_SIZE) {
+    const slice = items.slice(i, i + BATCH_SIZE);
+    try {
+      const part = await gradeOneBatch(ollama, model, slice, ctx);
+      out.push(...part);
+    } catch (e) {
+      // One bad batch shouldn't kill the whole grading run.
+      console.error(`[stack] grader batch failed (items ${i}..${i + slice.length}):`, e);
     }
   }
   return out;

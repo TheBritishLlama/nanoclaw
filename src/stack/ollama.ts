@@ -25,10 +25,14 @@ export class OllamaClient {
     prompt: string,
     options: Record<string, any> = {},
   ): Promise<string> {
+    // Ollama wants generation parameters nested under `options`, not at the top
+    // level. Top-level fields like `stream` stay at the root.
+    const body: Record<string, any> = { model, prompt, stream: false };
+    if (Object.keys(options).length > 0) body.options = options;
     const r = await this.fetcher(`${this.host}/api/generate`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ model, prompt, stream: false, ...options }),
+      body: JSON.stringify(body),
     });
     if (!r.ok) throw new Error(`Ollama generate failed: ${r.status}`);
     const j = (await r.json()) as { response: string };

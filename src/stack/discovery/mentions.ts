@@ -30,7 +30,7 @@ export function observeMentions(
       });
       seen.add(direct);
     }
-    if (item.blurb) {
+    if (typeof item.blurb === 'string' && item.blurb.length > 0) {
       for (const m of item.blurb.matchAll(URL_RE)) {
         const d = domainOf(m[0]);
         if (!d || seen.has(d) || isBloomedDomain(d, bloomlist)) continue;
