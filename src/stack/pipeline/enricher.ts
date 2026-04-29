@@ -26,6 +26,15 @@ function mdToHtml(md: string): string {
   );
 }
 
+// Haiku frequently wraps JSON output in ```json ... ``` markdown fences,
+// even when the prompt asks for "ONLY a JSON object". Strip the fences so
+// JSON.parse can succeed.
+function unwrapJsonFences(raw: string): string {
+  const trimmed = raw.trim();
+  const fenced = trimmed.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/);
+  return fenced ? fenced[1].trim() : trimmed;
+}
+
 export async function enrich(
   haiku: HaikuClient,
   webFetch: WebFetcher,
@@ -52,7 +61,7 @@ export async function enrich(
     groundable: boolean;
   };
   try {
-    parsed = JSON.parse(raw);
+    parsed = JSON.parse(unwrapJsonFences(raw));
   } catch {
     return null;
   }
