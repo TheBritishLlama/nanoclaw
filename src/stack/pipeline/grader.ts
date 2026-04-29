@@ -17,9 +17,11 @@ export interface GraderContext {
   sourceWeightingHint: string;
 }
 
-// 25 items per batch keeps the prompt under ~6KB (~1500 tokens) so it fits
-// inside Qwen 3 14B's default 4096-token context with curator blocks attached.
-const BATCH_SIZE = 25;
+// 15 items per batch keeps each Qwen 3 14B call comfortably under the 5-min
+// undici headers timeout (was 25 → some batches consistently timed out on
+// slower GPUs even with think:false). Output ~1500 tokens per batch instead
+// of 2500, finishes in ~90-150s on a typical consumer GPU.
+const BATCH_SIZE = 15;
 // Bumped above Ollama's default 4096 so larger curator blocks plus 25 items
 // don't get silently truncated. 8192 is safe for both 4B and 14B Qwen 3.
 const NUM_CTX = 8192;
