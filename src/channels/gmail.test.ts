@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import fs from 'fs';
 
 // Mock registry (registerChannel runs at import time)
 vi.mock('./registry.js', () => ({ registerChannel: vi.fn() }));
@@ -60,12 +61,32 @@ describe('GmailChannel', () => {
       expect(ch.name).toBe('gmail');
     });
 
-    it('defaults to unread query when no filter configured', () => {
-      const ch = new GmailChannel(makeOpts());
-      const query = (
-        ch as unknown as { buildQuery: () => string }
-      ).buildQuery();
-      expect(query).toBe('is:unread subject:@Jarvis');
+    describe('buildQuery', () => {
+      let existsSyncSpy: ReturnType<typeof vi.spyOn>;
+
+      afterEach(() => {
+        existsSyncSpy?.mockRestore();
+      });
+
+      it('returns base query when Stack config is absent', () => {
+        existsSyncSpy = vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+        const ch = new GmailChannel(makeOpts());
+        const query = (
+          ch as unknown as { buildQuery: () => string }
+        ).buildQuery();
+        expect(query).toBe('is:unread subject:@Jarvis');
+      });
+
+      it('widens query to include Stack reply subjects when Stack config is present', () => {
+        existsSyncSpy = vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+        const ch = new GmailChannel(makeOpts());
+        const query = (
+          ch as unknown as { buildQuery: () => string }
+        ).buildQuery();
+        expect(query).toBe(
+          '(is:unread subject:@Jarvis) OR (is:unread subject:"Re: Stack")',
+        );
+      });
     });
 
     it('defaults with no options provided', () => {

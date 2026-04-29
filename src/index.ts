@@ -32,6 +32,7 @@ import {
   getAllSessions,
   getAllTasks,
   getActiveGmailThreadJids,
+  getDb,
   getMessagesSince,
   getNewMessages,
   getRouterState,
@@ -57,7 +58,11 @@ import {
   loadSenderAllowlist,
   shouldDropMessage,
 } from './sender-allowlist.js';
-import { extractSessionCommand, handleSessionCommand, isSessionCommandAllowed } from './session-commands.js';
+import {
+  extractSessionCommand,
+  handleSessionCommand,
+  isSessionCommandAllowed,
+} from './session-commands.js';
 import { startSchedulerLoop } from './task-scheduler.js';
 import { Channel, NewMessage, RegisteredGroup } from './types.js';
 import { logger } from './logger.js';
@@ -183,18 +188,26 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
     timezone: TIMEZONE,
     deps: {
       sendMessage: (text) => channel.sendMessage(chatJid, text),
-      setTyping: (typing) => channel.setTyping?.(chatJid, typing) ?? Promise.resolve(),
-      runAgent: (prompt, onOutput) => runAgent(group, prompt, chatJid, onOutput),
+      setTyping: (typing) =>
+        channel.setTyping?.(chatJid, typing) ?? Promise.resolve(),
+      runAgent: (prompt, onOutput) =>
+        runAgent(group, prompt, chatJid, onOutput),
       closeStdin: () => queue.closeStdin(chatJid),
-      advanceCursor: (ts) => { lastAgentTimestamp[chatJid] = ts; saveState(); },
+      advanceCursor: (ts) => {
+        lastAgentTimestamp[chatJid] = ts;
+        saveState();
+      },
       formatMessages,
       canSenderInteract: (msg) => {
         const hasTrigger = TRIGGER_PATTERN.test(msg.content.trim());
         const reqTrigger = !isMainGroup && group.requiresTrigger !== false;
-        return isMainGroup || !reqTrigger || (hasTrigger && (
-          msg.is_from_me ||
-          isTriggerAllowed(chatJid, msg.sender, loadSenderAllowlist())
-        ));
+        return (
+          isMainGroup ||
+          !reqTrigger ||
+          (hasTrigger &&
+            (msg.is_from_me ||
+              isTriggerAllowed(chatJid, msg.sender, loadSenderAllowlist())))
+        );
       },
     },
   });
@@ -444,7 +457,12 @@ async function startMessageLoop(): Promise<void> {
             // Only close active container if the sender is authorized — otherwise an
             // untrusted user could kill in-flight work by sending /compact (DoS).
             // closeStdin no-ops internally when no container is active.
-            if (isSessionCommandAllowed(isMainGroup, loopCmdMsg.is_from_me === true)) {
+            if (
+              isSessionCommandAllowed(
+                isMainGroup,
+                loopCmdMsg.is_from_me === true,
+              )
+            ) {
               queue.closeStdin(chatJid);
             }
             // Enqueue so processGroupMessages handles auth + cursor advancement.
@@ -657,6 +675,21 @@ async function main(): Promise<void> {
   if (channels.length === 0) {
     logger.fatal('No channels connected');
     process.exit(1);
+  }
+
+  // Stack module init (optional — only if groups/stack/config.json exists)
+  const stackConfigPath = path.resolve('groups/stack/config.json');
+  if (fs.existsSync(stackConfigPath)) {
+    try {
+      const { initStack } = await import('./stack/index.js');
+      await initStack({ db: getDb() });
+      logger.info('Stack module initialized');
+    } catch (err) {
+      logger.error(
+        { err },
+        'Stack module failed to initialize — continuing without it',
+      );
+    }
   }
 
   // Start subsystems (independently of connection handler)

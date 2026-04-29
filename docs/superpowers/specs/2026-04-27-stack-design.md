@@ -37,10 +37,10 @@ Reply policy:
 | Delivery channel | NanoClaw Gmail channel (`src/channels/gmail.ts`); **drops sent FROM `amazingkangaroofilms@gmail.com` (NanoClaw agent), TO `kaitseng@seattleacademy.org` (Kai's school email)** | Already implemented; supports inbound (rating + command replies) and outbound (drops). **Gmail OAuth tokens require re-auth before launch.** |
 | Knowledge store | Obsidian vault at `/mnt/c/Users/Explo/Documents/Stack/` (new, isolated) | Browsable, searchable, future-proof markdown — survives any tooling change |
 | Operational store | SQLite (`src/db.ts`) — new tables for queue, scrape_log, ratings, source_stats, health_log, candidate_sources | Fast indexed access for picker, feedback loop, and source discovery |
-| Grader (LLM, high volume) | Qwen 2.5 14B-Instruct via Ollama, locally | Free, fast, no rate limits; not fallback to a paid model |
-| Scout classifier (LLM, mining tasks) | Qwen 2.5 3B-Instruct via Ollama, locally | Smaller/cheaper than the grader; constrained classifier task (URL extraction, "is this domain interesting") doesn't need 14B |
+| Grader (LLM, high volume) | Qwen 3 14B via Ollama, locally | Free, fast, no rate limits; not fallback to a paid model |
+| Scout classifier (LLM, mining tasks) | Qwen 3 4B via Ollama, locally | Smaller/cheaper than the grader; constrained classifier task (URL extraction, "is this domain interesting") doesn't need 14B |
 | Enricher (LLM, lower volume, quality-critical) | Claude Haiku 4.5 (`claude-haiku-4-5-20251001`) via Claude Agent SDK | Cost-disciplined; handles cultural nuance fine for ~250-word output |
-| Search backend (for scout E) | Brave Search API (free tier, 2,000 queries/month) | Free, no Google-scraping fragility; flag in config to swap for Kagi or self-hosted Searx |
+| Search backend (for scout E) | SearXNG (self-hosted or public instance with JSON API enabled) | Free, no API quota, no tracking; aggregates Google/Bing/DuckDuckGo etc.; provider flag in config can swap for Brave/Kagi |
 | Scraping libraries | `node-fetch` + `cheerio` for HTML; XML parsing for RSS/Atom | Standard Node stack matches NanoClaw codebase |
 | Borrowed prompts | Fabric patterns (`summarize`, `extract_wisdom`, `analyze_claims`) — read-only borrow, adapted | Battle-tested by ~40k Fabric users |
 | Group identity | New dedicated NanoClaw group: `groups/stack/` with its own `CLAUDE.md`, prompts, config | Isolation from main group keeps tutor traffic from polluting other agent context |
@@ -55,7 +55,7 @@ Reply policy:
 │         DNS, TLS, processes…)                  T2: probationary cands  │
 │              │                                 T3: scouts A,B,E        │
 │              │                                 (HN/Lobsters comments + │
-│              │  while not exhausted            Brave topic search)     │
+│              │  while not exhausted            SearXNG topic search)   │
 │              │  contributes ~50% of            sampled via stochastic  │
 │              │  enrichment input               weighted lottery        │
 │              │                                              │          │
@@ -175,7 +175,7 @@ The discovery system is a 3-tier source pool sampled by a stochastic weighting f
    │           DISCOVERY SCOUTS (Tier 3, background)          │
    │   Mining tasks running weekly to find candidate domains  │
    │   MVP scouts: A (HN comments), B (Lobsters comments),    │
-   │   E (topic-driven web search via Brave)                  │
+   │   E (topic-driven web search via SearXNG)                │
    └──────────────────────────────────────────────────────────┘
 ```
 
@@ -244,7 +244,7 @@ interface DiscoveryAlgorithm {
 interface DiscoveryContext {
   db: Database;
   vault: VaultWriter;
-  classifier: QwenClassifier;             // Qwen 2.5 3B
+  classifier: QwenClassifier;             // Qwen 3 4B
   webFetch: WebFetcher;
   search?: SearchClient;                  // present if a search backend is configured
   ratings: RatingHistory;                 // for personalization-aware algorithms
@@ -261,7 +261,7 @@ A central `discoveryRegistry.ts` loads enabled algorithms from config at startup
 | `generic_algorithm` | core | nightly observation + every-4-days refresh | Passive observation of domain mentions across all active sources; every 4 days refreshes the source pool — re-weights existing sources by recent mention activity, surfaces new candidates when they appear, flags going-stale sources |
 | `scout_A_hn_comments` | supplement | weekly | HN comment URL mining for freshness/personalization |
 | `scout_B_lobsters_comments` | supplement | weekly | Lobste.rs comment URL mining |
-| `scout_E_brave_topic` | supplement | weekly | Topic-driven Brave Search using Kai's high-rated tags |
+| `scout_E_searxng_topic` | supplement | weekly | Topic-driven SearXNG search using Kai's high-rated tags |
 
 **Future algorithms** (Phase 2+, easy to drop in via the interface):
 - `scout_C_github_readme` — README link extraction
@@ -317,7 +317,7 @@ type CandidateSource = {
 - For each story that produced a high-rated drop (rating ≥7) in the last 30 days, fetch its HN comment thread.
 - Extract all outbound URLs (regex + cheerio).
 - Group by domain; ignore mega-domains (github.com, youtube.com, twitter.com, wikipedia.org, etc. — configurable bloomlist).
-- Pass surviving (domain, sample comment context) tuples to **Qwen 2.5 3B** classifier: "Is this domain a likely high-signal indie/tech blog or tool docs page? yes/no."
+- Pass surviving (domain, sample comment context) tuples to **Qwen 3 4B** classifier: "Is this domain a likely high-signal indie/tech blog or tool docs page? yes/no."
 - Approved domains: `occurrence_count++`. Domains with ≥3 occurrences over rolling 30 days advance to RSS auto-discovery (see 2.4).
 
 **Scout B — Lobste.rs comment URL mining**
@@ -325,11 +325,11 @@ type CandidateSource = {
 
 **Scout E — Topic-driven web search**
 - Read the top-tagged topics from your high-rated drops (rating ≥7) over the last 60 days. Tags are extracted by Haiku during enrichment (e.g., `homelab`, `rust`, `caching`, `privacy`).
-- For each top topic, query Brave Search API: `"{topic} blog 2026"` and `"{topic} self-hosted tools"`.
-- Take top 20 results. For each, pass (URL, snippet, topic) to **Qwen 2.5 3B**: "Is this a tech/builder blog post that would interest someone studying {topic}? yes/no."
+- For each top topic, query the configured SearXNG instance (`GET {searxngInstance}/search?q={query}&format=json`): `"{topic} blog 2026"` and `"{topic} self-hosted tools"`.
+- Take top 20 results. For each, pass (URL, snippet, topic) to **Qwen 3 4B**: "Is this a tech/builder blog post that would interest someone studying {topic}? yes/no."
 - Approved URLs: domain extracted, `occurrence_count++`, same flow as A/B.
 
-Scout cost is bounded: A and B do at most ~50 LLM classification calls per week (free, local Qwen 3B). E does at most 10 search queries per week (well under Brave's 2,000/month free quota) plus ~200 Qwen classification calls.
+Scout cost is bounded: A and B do at most ~50 LLM classification calls per week (free, local Qwen 3 4B). E does at most ~10 search queries per week against SearXNG (no API quota; the `weeklyQueryBudget` is a self-imposed kindness budget for public instances) plus ~200 Qwen classification calls.
 
 #### 2.6 RSS auto-discovery (shared infrastructure)
 
@@ -463,7 +463,7 @@ A small module that consumes the `ratings` table and emits three artifacts conti
    - Rated 9, "Tailscale Funnel": "love anything about networking"
    - Rated 2, "Vaultwarden": "third time you've sent me a Bitwarden alternative"
    ```
-   Qwen 14B is asked to weigh these notes when scoring new candidates.
+   Qwen 3 14B is asked to weigh these notes when scoring new candidates.
 
 MVP behavior:
 - Source weighting affects both the Grader prompt and the `quality_factor` in the sampling formula — high-rated sources get pulled more often AND their candidates are graded more leniently.
@@ -472,7 +472,7 @@ MVP behavior:
 - Feedback text is processed only as in-prompt notes for MVP. No structured tag extraction or per-topic weighting yet.
 
 Phase 2 additions (deferred):
-- Tag-level personalization: Qwen 3B extracts structured tags from feedback text (e.g., "no crypto" → `disliked_tags: [crypto]`); drops with disliked tags get penalized in queue order, drops with liked tags get bumped.
+- Tag-level personalization: Qwen 3 4B extracts structured tags from feedback text (e.g., "no crypto" → `disliked_tags: [crypto]`); drops with disliked tags get penalized in queue order, drops with liked tags get bumped.
 - Per-bucket weight auto-tuning based on rating averages.
 - Hard source-disabling after rolling avg <3 over 20+ drops.
 
@@ -677,16 +677,16 @@ Stored as markdown prompt files in `groups/stack/prompts/`. Borrowed structure f
 4. Sampled scrapers run in parallel; ~150–400 raw items.
 5. URL-dedup against vault → ~80–250 unique candidates.
 6. Adaptive curator refreshes `source_stats`, `exemplar_set`, and `recent_feedback_block` from last 60 days of ratings + feedback text.
-7. Grader (Qwen 14B) scores all in batched calls; ~10–30 survive.
+7. Grader (Qwen 3 14B) scores all in batched calls; ~10–30 survive.
 8. Enricher (Haiku) processes survivors sequentially with 1s delay; drops written to vault and queue.
 9. Pending-review drops emailed to `stack/review` label.
 10. Foundations track: ensure ≥3 enriched Foundation items always sit in queue (top up if below).
 11. **`generic_algorithm` observation step:** every URL and embedded outbound link from this cycle's raw items has its domain logged to `stack_domain_mentions`. No LLM, just regex + domain parsing.
 
 **Weekly (Sunday ~3am):** registry runs each enabled supplemental algorithm on its own schedule. Default cron entries:
-1. `scout_A_hn_comments` (Sun 03:00) — over the last 30 days of high-rated drops, mines URLs from HN comment threads; Qwen 3B classifies; updates `stack_candidate_sources` with `origin_algorithm='scout_A_hn_comments'`.
+1. `scout_A_hn_comments` (Sun 03:00) — over the last 30 days of high-rated drops, mines URLs from HN comment threads; Qwen 3 4B classifies; updates `stack_candidate_sources` with `origin_algorithm='scout_A_hn_comments'`.
 2. `scout_B_lobsters_comments` (Sun 03:30) — same pattern on Lobste.rs.
-3. `scout_E_brave_topic` (Sun 04:00) — queries top-tagged topics on Brave Search; classifies results.
+3. `scout_E_searxng_topic` (Sun 04:00) — queries top-tagged topics on the configured SearXNG instance; classifies results.
 4. Domains crossing `occurrence_count ≥ 3` get RSS auto-discovery; successful probes become Tier 2 candidates.
 5. Trial-period evaluation: Tier 2 sources with 5+ trial drops are promoted (avg ≥6) or archived (avg <4).
 
@@ -824,8 +824,8 @@ The vault is the canonical knowledge store; SQLite is the operational index. If 
   "confidenceThreshold": 0.7,
   "reviewApproveThreshold": 6,
   "queueMinDepth": 10,
-  "graderModel": "qwen2.5:14b",
-  "scoutClassifierModel": "qwen2.5:3b",
+  "graderModel": "qwen3:14b",
+  "scoutClassifierModel": "qwen3:4b",
   "enricherModel": "claude-haiku-4-5-20251001",
   "rssFeeds": [
     "https://simonwillison.net/atom/everything/",
@@ -851,7 +851,7 @@ The vault is the canonical knowledge store; SQLite is the operational index. If 
     { "name": "generic_algorithm",        "enabled": true, "schedule": "0 4 */4 * *" },
     { "name": "scout_A_hn_comments",      "enabled": true, "schedule": "0 3 * * 0" },
     { "name": "scout_B_lobsters_comments","enabled": true, "schedule": "30 3 * * 0" },
-    { "name": "scout_E_brave_topic",      "enabled": true, "schedule": "0 4 * * 0" }
+    { "name": "scout_E_searxng_topic",    "enabled": true, "schedule": "0 4 * * 0" }
   ],
   "discovery": {
     "domainBloomlist": ["github.com","youtube.com","twitter.com","x.com","wikipedia.org","reddit.com","medium.com","substack.com"],
@@ -865,9 +865,9 @@ The vault is the canonical knowledge store; SQLite is the operational index. If 
     "archiveMaxAvgRating": 4
   },
   "search": {
-    "provider": "brave",
-    "braveApiKey": "{env:BRAVE_API_KEY}",
-    "weeklyQueryBudget": 10
+    "provider": "searxng",
+    "searxngInstance": "{env:SEARXNG_INSTANCE}",
+    "weeklyQueryBudget": 50
   },
   "ollama": {
     "host": "http://localhost:11434",
@@ -881,7 +881,7 @@ The vault is the canonical knowledge store; SQLite is the operational index. If 
 
 | Phase | Scope | Rough effort |
 |-------|-------|--------------|
-| **MVP (Phase 1)** | Everything in this spec: 8 starting Tier 1 scrapers, Foundations track (~80 items), 3-tier source pool with stochastic sampling formula, **pluggable discovery algorithm registry** with `generic_algorithm` (core, runs every 4 days — keeps source pool current via re-weighting + organic new-candidate surfacing) plus supplemental scouts A/B/E (HN comments, Lobsters comments, Brave topic search) using Qwen 3B classifier, RSS auto-discovery, candidate promotion/demotion, Qwen 14B grading with adaptive exemplars + source weighting + free-form feedback notes, Haiku enrichment, Obsidian vault writer, 3/day email delivery, numeric rating handler with optional feedback text (silent), `/learn` and `/more` commands with one-line acks, confidence + review flow, Ollama health monitor with auto-restart and email-postpone. | ~2 weeks |
+| **MVP (Phase 1)** | Everything in this spec: 8 starting Tier 1 scrapers, Foundations track (~80 items), 3-tier source pool with stochastic sampling formula, **pluggable discovery algorithm registry** with `generic_algorithm` (core, runs every 4 days — keeps source pool current via re-weighting + organic new-candidate surfacing) plus supplemental scouts A/B/E (HN comments, Lobsters comments, SearXNG topic search) using Qwen 3 4B classifier, RSS auto-discovery, candidate promotion/demotion, Qwen 3 14B grading with adaptive exemplars + source weighting + free-form feedback notes, Haiku enrichment, Obsidian vault writer, 3/day email delivery, numeric rating handler with optional feedback text (silent), `/learn` and `/more` commands with one-line acks, confidence + review flow, Ollama health monitor with auto-restart and email-postpone. | ~2 weeks |
 | **Phase 2** | (a) Custom Reddit scraper for more subs (`r/devops`, `r/programming`, etc.) with proper anti-bot handling; (b) Fabric Level 3 — `/learn-from <YouTube/article URL>` ingests via Fabric's `extract_wisdom` to generate drops; (c) Semantic dedup via embeddings; (d) Tag-level personalization in Adaptive Curator (boost queue order based on liked tags, not just source weight); (e) Additional discovery algorithms via the registry interface — `scout_C_github_readme`, `scout_D_awesome_traversal`, `scout_G_lobsters_tags`, `scout_youtube_creator_links`. Each new algorithm = one new file in `src/discovery/algorithms/` + one config line. | ~1 week |
 | **Phase 3 (Full Build, Shape C)** | (a) Decoder mode — paste any text, get a per-term breakdown of every tool/concept/lore reference; (b) Quiz / spaced repetition — Anki-style intervals over the corpus, sent as separate quiz emails (e.g. weekly "What was Tailscale used for?"); (c) Corpus search and history view inside the vault. | ~2 weeks |
 
@@ -911,7 +911,7 @@ Following NanoClaw conventions (`*.test.ts`):
 ## Installation
 
 Implemented as a NanoClaw feature skill at `.claude/skills/add-stack/`. Skill apply (`scripts/apply-skill.ts`) does:
-1. Add Ollama via existing `add-ollama-tool` skill if not present; pull `qwen2.5:14b` and `qwen2.5:3b`.
+1. Add Ollama via existing `add-ollama-tool` skill if not present; pull `qwen3:14b` and `qwen3:4b`.
 2. Install Node dependencies (RSS parser, etc.) into `package.json`.
 3. Run DB migrations for the eight new tables (`stack_queue`, `stack_ratings`, `stack_source_stats`, `stack_scrape_log`, `stack_health_log`, `stack_foundations`, `stack_candidate_sources`, `stack_domain_mentions`).
 4. Create `groups/stack/` with default `CLAUDE.md`, `config.json`, prompt templates, foundations seed.
@@ -919,13 +919,13 @@ Implemented as a NanoClaw feature skill at `.claude/skills/add-stack/`. Skill ap
 6. Register cron entries: `stack-scrape` (nightly), one entry per enabled discovery algorithm (registered automatically from `discoveryAlgorithms[].schedule`), `stack-deliver-08`, `stack-deliver-10`, `stack-deliver-15`, `stack-ollama-watchdog` (every 15min).
 7. Wire inbound Gmail handler to recognize numeric ratings + `/learn` + `/more` on Stack threads.
 8. Walk the user through Gmail OAuth re-auth (existing `add-gmail` flow) — required before launch.
-9. Prompt the user to add `BRAVE_API_KEY` to NanoClaw's `.env` (free signup at brave.com/search/api).
+9. Prompt the user to set `SEARXNG_INSTANCE` in NanoClaw's `.env` to a SearXNG URL with the JSON API enabled (self-hosted is recommended for reliability + privacy; public instances at https://searx.space/ may have JSON disabled).
 10. Print final Gmail-label setup steps for Kai to complete manually.
 
 ## Open Questions / Known Unknowns
 
 - **Vault path.** Defaulting to `/mnt/c/Users/Explo/Documents/Stack/` (new, isolated). Confirm or override.
-- **Search backend.** Defaulting to Brave Search API (free 2k/month). Swap to Kagi or self-hosted Searx by changing `search.provider` in config.
+- **Search backend.** Defaulting to SearXNG (free, no API quota, no signup). User must point `searxngInstance` at a JSON-API-enabled instance — self-hosted recommended; public instances can be found at https://searx.space/ filtered by `JSON: yes`. Swap to Brave or Kagi by changing `search.provider` in config.
 - **Gmail FROM identity.** Drops are sent from the NanoClaw agent's existing Gmail account. OAuth tokens require re-auth before launch — handled in install flow.
 - **Reddit scraping fragility.** May break early; auto-disable + retry quarterly until Phase 2's custom scraper.
 - **Confidence threshold tuning.** `0.7` is a guess; review after 1 week of `stack_scrape_log` data.
@@ -935,6 +935,6 @@ Implemented as a NanoClaw feature skill at `.claude/skills/add-stack/`. Skill ap
 - **Foundations completeness.** ~80 seed items is a guess. Likely to grow as we identify gaps. Foundations list is editable as a JSON file.
 - **Rating reply matching.** Relies on Gmail `In-Reply-To` / thread ID being preserved. If rating arrives outside a reply (forwarded, etc.), it can't be matched and is logged as `unparsed_reply`.
 - **Sampling formula tuning.** `min_sample_probability=0.10` and jitter range `0.7–1.3` are starting guesses. Once 30+ days of ratings exist, validate that small sources are surfacing at the desired rate; tune if dominant sources are over- or under-represented.
-- **Scout cost ceiling.** Scout E uses ~10 Brave queries/week — well under free tier. Scouts A and B do ~50 Qwen 3B classifications/week — local and free. As corpus grows and high-rated drops accumulate, A/B mining grows linearly; cap at 200 classifications/week if it balloons.
+- **Scout cost ceiling.** Scout E uses ~10 SearXNG queries/week — no API quota, but courteous to public instances. Scouts A and B do ~50 Qwen 3 4B classifications/week — local and free. As corpus grows and high-rated drops accumulate, A/B mining grows linearly; cap at 200 classifications/week if it balloons.
 - **`generic_algorithm` thresholds.** Starting values (≥5 recent mentions across ≥2 distinct sources over 30 days, refresh every 4 days) are guesses tuned for "keep current" rather than "big monthly sweep." After 2-3 refresh cycles, audit which domains get re-weighted up vs. surfaced as new candidates — adjust thresholds if too few candidates appear or if the source pool becomes too volatile.
 - **Algorithm registry growth.** The `DiscoveryAlgorithm` interface is intentionally minimal so anything can implement it. As Stack matures, expect to add algorithms that pull from podcasts, YouTube descriptions, newsletters, and user-curated lists. Each is a new file + config line.
