@@ -20,11 +20,12 @@ Your rules and context files live at `/workspace/obsidian/`. Always use `mcp__ob
 | `mcp__obsidian__directory_tree` | See the full vault structure |
 
 ### Step 1 — Always load these files (every response)
-Call `mcp__obsidian__read_multiple_files` with all four paths at once:
+Call `mcp__obsidian__read_multiple_files` with all five paths at once:
 - `/workspace/obsidian/rules/formatting.md` — how to write responses
 - `/workspace/obsidian/rules/permissions.md` — what you can and can't do, who the admin is
 - `/workspace/obsidian/memory/general.md` — who the admin is, their setup, projects, and accounts
 - `/workspace/obsidian/memory/specific-memory.md` — specific facts, decisions, and ongoing tasks from past sessions
+- `/workspace/obsidian/memory/tasks.md` — project roadmaps and phase checklists (Cadence, Null, and future projects)
 
 ### System reference
 
