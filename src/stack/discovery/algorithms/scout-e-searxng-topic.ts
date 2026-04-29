@@ -1,4 +1,5 @@
 import type { DiscoveryAlgorithm, DiscoveryContext, CandidateSourceObservation } from '../registry.js';
+import type { SearchResult } from '../search.js';
 import { upsertCandidateSource } from '../../db.js';
 import { isBloomedDomain } from '../rss-discovery.js';
 
@@ -45,7 +46,7 @@ export const scoutESearxngTopic: DiscoveryAlgorithm = {
       for (const tmpl of QUERY_TEMPLATES) {
         if (queries >= DEFAULT_QUERY_BUDGET) break;
         const q = tmpl.replace('{}', topic);
-        let results;
+        let results: SearchResult[];
         try { results = await ctx.search.search(q); } catch { results = []; }
         queries++;
         const seen = new Set<string>();
