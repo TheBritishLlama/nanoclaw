@@ -23,6 +23,8 @@ import {
   listGradedPending,
   deleteGradedPending,
   countGradedPending,
+  getKnownUrls,
+  recordScrapeOutcomes,
 } from '../src/stack/db.js';
 import { readEnvFile } from '../src/env.js';
 import { loadStackConfig } from '../src/stack/config.js';
@@ -103,8 +105,40 @@ async function main() {
   log('Stage 1 — running 8 scrapers in parallel');
   const t0 = Date.now();
   const scraperRegistry = buildDefaultRegistry({ rssFeeds: cfg.rssFeeds });
-  const items = await runEnabledScrapers(cfg.enabledScrapers, scraperRegistry);
-  log(`  scraped ${items.length} raw items in ${Math.round((Date.now() - t0) / 1000)}s`);
+  const allItems = await runEnabledScrapers(
+    cfg.enabledScrapers,
+    scraperRegistry,
+  );
+  log(
+    `  scraped ${allItems.length} raw items in ${Math.round((Date.now() - t0) / 1000)}s`,
+  );
+
+  // Dedup against URLs we've already seen.
+  const seen = getKnownUrls(
+    db,
+    allItems.map((i) => i.url),
+  );
+  let items = allItems.filter((i) => !seen.has(i.url));
+  const nowIso = new Date().toISOString();
+  if (seen.size > 0) {
+    log(`  ${seen.size} duplicates skipped → ${items.length} new items`);
+    recordScrapeOutcomes(
+      db,
+      allItems
+        .filter((i) => seen.has(i.url))
+        .map((i) => ({ source: i.source, url: i.url, outcome: 'duplicate' })),
+      nowIso,
+    );
+  }
+
+  // Optional STACK_RUN_LIMIT env var caps the input to stage 2.
+  const limit = process.env.STACK_RUN_LIMIT
+    ? parseInt(process.env.STACK_RUN_LIMIT, 10)
+    : undefined;
+  if (limit && items.length > limit) {
+    items = items.slice(0, limit);
+    log(`  STACK_RUN_LIMIT=${limit} → trimmed to first ${items.length} items`);
+  }
 
   // ============== Stage 2: GRADE (Qwen 3 14B) ==============
   log('Stage 2 — grading via Qwen 3 14B');
@@ -125,8 +159,20 @@ async function main() {
 
   // Persist kept items so a stage-3 crash doesn't waste the grading work.
   // Resume on the next run pulls these back in via listGradedPending().
-  const insertedPending = insertGradedPending(db, kept, new Date().toISOString());
+  const insertedPending = insertGradedPending(db, kept, nowIso);
   log(`  checkpointed ${insertedPending} graded items to stack_graded_pending`);
+
+  // Log every grader verdict so the URL becomes "seen" next time.
+  recordScrapeOutcomes(
+    db,
+    graded.map((g) => ({
+      source: g.raw.source,
+      url: g.raw.url,
+      outcome: g.keep ? 'graded_keep' : 'graded_drop',
+      reasoning: g.reasoning,
+    })),
+    nowIso,
+  );
 
   // ============== Stage 3: ENRICH (Claude Haiku 4.5) ==============
   log('Stage 3 — enriching via Claude Haiku 4.5');

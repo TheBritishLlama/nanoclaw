@@ -103,10 +103,12 @@ CREATE TABLE IF NOT EXISTS stack_graded_pending (
 
 CREATE INDEX IF NOT EXISTS idx_queue_status_created ON stack_queue(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_queue_email_message_id ON stack_queue(email_message_id);
+CREATE INDEX IF NOT EXISTS idx_queue_source_url ON stack_queue(source_url);
 CREATE INDEX IF NOT EXISTS idx_ratings_drop_id ON stack_ratings(drop_id);
 CREATE INDEX IF NOT EXISTS idx_health_component_observed ON stack_health_log(component, observed_at);
 CREATE INDEX IF NOT EXISTS idx_candidate_status ON stack_candidate_sources(status);
 CREATE INDEX IF NOT EXISTS idx_graded_pending_graded_at ON stack_graded_pending(graded_at);
+CREATE INDEX IF NOT EXISTS idx_scrape_log_url ON stack_scrape_log(url);
 `;
 
 export function applyStackSchema(db: Database.Database): void {
@@ -373,9 +375,7 @@ export function insertGradedPending(
 
 export function listGradedPending(db: Database.Database): Graded[] {
   const rows = db
-    .prepare(
-      `SELECT * FROM stack_graded_pending ORDER BY graded_at ASC`,
-    )
+    .prepare(`SELECT * FROM stack_graded_pending ORDER BY graded_at ASC`)
     .all() as any[];
   return rows.map((r) => ({
     raw: {
@@ -402,4 +402,78 @@ export function countGradedPending(db: Database.Database): number {
       c: number;
     }
   ).c;
+}
+
+// ---- URL dedup -------------------------------------------------------------
+// "Seen" = grader already processed this URL (scrape_log) OR an enriched drop
+// for it lives in the queue OR it's already waiting in the graded checkpoint.
+// Pre-filtering against this set is the difference between a 2-hour daily run
+// and a 20-minute one — without it, every RSS backfill re-grades the same
+// hundreds of items every day.
+export function getKnownUrls(
+  db: Database.Database,
+  urls: string[],
+): Set<string> {
+  if (urls.length === 0) return new Set();
+  const placeholders = urls.map(() => '?').join(',');
+  const seen = new Set<string>();
+  const rows = db
+    .prepare(
+      `SELECT url FROM (
+         SELECT url FROM stack_scrape_log WHERE url IN (${placeholders})
+         UNION
+         SELECT source_url AS url FROM stack_queue WHERE source_url IN (${placeholders})
+         UNION
+         SELECT url FROM stack_graded_pending WHERE url IN (${placeholders})
+       )`,
+    )
+    .all(...urls, ...urls, ...urls) as { url: string }[];
+  for (const r of rows) seen.add(r.url);
+  return seen;
+}
+
+export type ScrapeOutcome =
+  | 'graded_keep'
+  | 'graded_drop'
+  | 'duplicate'
+  | 'enriched'
+  | 'enrich_rejected'
+  | 'unparsed_reply'
+  | 'vault_write_failed';
+
+export function recordScrapeOutcomes(
+  db: Database.Database,
+  rows: Array<{
+    source: string;
+    url: string;
+    outcome: ScrapeOutcome;
+    reasoning?: string;
+  }>,
+  fetchedAt: string,
+): void {
+  if (rows.length === 0) return;
+  const stmt = db.prepare(
+    `INSERT INTO stack_scrape_log (source, url, outcome, reasoning, fetched_at)
+     VALUES (@source, @url, @outcome, @reasoning, @fetchedAt)`,
+  );
+  const tx = db.transaction(
+    (
+      input: Array<{
+        source: string;
+        url: string;
+        outcome: ScrapeOutcome;
+        reasoning?: string;
+      }>,
+    ) => {
+      for (const r of input)
+        stmt.run({
+          source: r.source,
+          url: r.url,
+          outcome: r.outcome,
+          reasoning: r.reasoning ?? null,
+          fetchedAt,
+        });
+    },
+  );
+  tx(rows);
 }

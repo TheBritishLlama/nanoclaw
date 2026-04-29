@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 
-import { applyStackSchema } from './db.js';
+import { applyStackSchema, getKnownUrls, recordScrapeOutcomes } from './db.js';
 import { loadStackConfig } from './config.js';
 import { initVault } from './vault.js';
 import {
@@ -135,10 +135,29 @@ export async function initStack({ db }: InitStackDeps): Promise<void> {
 
   // Cron 1: daily scrape at 02:00
   scheduler.addCron('stack-scrape', '0 2 * * *', async () => {
-    const items = await runEnabledScrapers(
+    const allItems = await runEnabledScrapers(
       cfg.enabledScrapers,
       scraperRegistry,
     );
+
+    // Dedup: skip URLs we've already graded, enriched, or have pending.
+    // RSS backfill returns 800+ items every run; without this filter, daily
+    // grading takes hours instead of minutes.
+    const seen = getKnownUrls(
+      db,
+      allItems.map((i) => i.url),
+    );
+    const items = allItems.filter((i) => !seen.has(i.url));
+    const nowIso = new Date().toISOString();
+    if (seen.size > 0) {
+      recordScrapeOutcomes(
+        db,
+        allItems
+          .filter((i) => seen.has(i.url))
+          .map((i) => ({ source: i.source, url: i.url, outcome: 'duplicate' })),
+        nowIso,
+      );
+    }
 
     const exemplarBlock = buildExemplarBlock(db, 14);
     const recentFeedbackBlock = buildRecentFeedbackBlock(db, 14);
@@ -150,27 +169,56 @@ export async function initStack({ db }: InitStackDeps): Promise<void> {
       sourceWeightingHint,
     });
 
+    // Log every grader verdict so the URL becomes "seen" next time.
+    recordScrapeOutcomes(
+      db,
+      graded.map((g) => ({
+        source: g.raw.source,
+        url: g.raw.url,
+        outcome: g.keep ? 'graded_keep' : 'graded_drop',
+        reasoning: g.reasoning,
+      })),
+      nowIso,
+    );
+
     for (const g of graded) {
       if (!g.keep || !g.bucket) continue;
-      const drop = await enrich(
-        haiku,
-        async (url) => {
-          const r = await fetch(url);
-          return r.text();
-        },
-        g,
-      );
-      if (!drop) continue;
-      persistDrop(db, cfg.vaultPath, drop);
+      try {
+        const drop = await enrich(
+          haiku,
+          async (url) => {
+            const r = await fetch(url);
+            return r.text();
+          },
+          g,
+        );
+        if (!drop) {
+          recordScrapeOutcomes(
+            db,
+            [
+              {
+                source: g.raw.source,
+                url: g.raw.url,
+                outcome: 'enrich_rejected',
+              },
+            ],
+            nowIso,
+          );
+          continue;
+        }
+        persistDrop(db, cfg.vaultPath, drop);
+        recordScrapeOutcomes(
+          db,
+          [{ source: g.raw.source, url: g.raw.url, outcome: 'enriched' }],
+          nowIso,
+        );
+      } catch (e) {
+        console.error(`[stack] enrich failed for ${g.raw.url}:`, e);
+      }
     }
 
     // Plan 2: feed scraped items into the domain mention observer for generic_algorithm.
-    observeMentions(
-      db,
-      items,
-      cfg.discovery.domainBloomlist,
-      new Date().toISOString(),
-    );
+    observeMentions(db, items, cfg.discovery.domainBloomlist, nowIso);
 
     await ensureMinFoundationsInQueue(
       db,
