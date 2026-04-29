@@ -2,7 +2,12 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
-import { applyStackSchema, insertQueueDrop, getQueuedDropsOldestFirst } from '../../src/stack/db.js';
+import {
+  applyStackSchema, insertQueueDrop, getQueuedDropsOldestFirst,
+  insertDomainMention, recentDomainMentions,
+  upsertCandidateSource, getCandidateSource,
+  markSourceStaleness, getSourceStat,
+} from '../../src/stack/db.js';
 
 describe('stack db', () => {
   let db: Database.Database;
@@ -49,5 +54,34 @@ describe('stack db', () => {
     expect(drops).toHaveLength(1);
     expect(drops[0].name).toBe('Tailscale');
     expect(drops[0].tags).toEqual(['networking', 'vpn']);
+  });
+});
+
+describe('discovery db queries', () => {
+  let db: Database.Database;
+  beforeEach(() => {
+    db = new Database(':memory:');
+    applyStackSchema(db);
+  });
+
+  it('inserts and reads back recent domain mentions', () => {
+    insertDomainMention(db, { domain: 'example.com', source: 'hn', observedAt: '2026-04-28T00:00:00Z' });
+    insertDomainMention(db, { domain: 'example.com', source: 'lobsters', observedAt: '2026-04-29T00:00:00Z' });
+    const out = recentDomainMentions(db, '2026-04-01T00:00:00Z');
+    expect(out.find(r => r.domain === 'example.com')!.recent_mentions).toBe(2);
+    expect(out.find(r => r.domain === 'example.com')!.distinct_source_count).toBe(2);
+  });
+
+  it('upserts candidate source and bumps occurrence_count', () => {
+    upsertCandidateSource(db, { domain: 'x.com', origin_algorithm: 'scout_A_hn_comments', firstObservedAt: '2026-04-28T00:00:00Z' });
+    upsertCandidateSource(db, { domain: 'x.com', origin_algorithm: 'scout_A_hn_comments', firstObservedAt: '2026-04-29T00:00:00Z' });
+    const c = getCandidateSource(db, 'x.com')!;
+    expect(c.occurrence_count).toBe(2);
+    expect(c.status).toBe('observed');
+  });
+
+  it('marks source staleness in stack_source_stats', () => {
+    markSourceStaleness(db, 'hn', 'going_stale', '2026-04-28T00:00:00Z');
+    expect(getSourceStat(db, 'hn')!.staleness).toBe('going_stale');
   });
 });

@@ -15,6 +15,7 @@ export interface DiscoveryContext {
   search?: SearxngClient;
   bloomlist: string[];
   occurrenceThreshold: number;
+  now?: () => Date;
 }
 
 export interface DiscoveryAlgorithm {
