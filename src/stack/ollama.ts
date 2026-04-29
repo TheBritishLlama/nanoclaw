@@ -1,20 +1,28 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { Agent } from 'undici';
+import { Agent, setGlobalDispatcher } from 'undici';
 import type { HealthState } from './types.js';
 
 const execAsync = promisify(exec);
 type Fetcher = typeof fetch;
 
-// Long-timeout dispatcher for Ollama. Default undici headersTimeout is 5
-// minutes — a slower GPU running a 25-item Qwen 14B grade can blow past
-// that before the model emits its first token. Bump to 30 min headers,
-// disable body timeout entirely (model can stream as long as it likes).
-const longTimeoutDispatcher = new Agent({
-  headersTimeout: 30 * 60 * 1000,
-  bodyTimeout: 0,
-  connectTimeout: 30 * 1000,
-});
+// Default undici headersTimeout is 5 minutes — a slower GPU running a Qwen
+// 14B grade batch can blow past that before the model emits its first token.
+// Bump to 30 min headers, disable body timeout entirely. setGlobalDispatcher
+// affects Node's built-in fetch (passing a dispatcher: option to fetch is
+// silently ignored on Node 24, so this is the only reliable way).
+let dispatcherInstalled = false;
+function ensureLongTimeoutDispatcher(): void {
+  if (dispatcherInstalled) return;
+  setGlobalDispatcher(
+    new Agent({
+      headersTimeout: 30 * 60 * 1000,
+      bodyTimeout: 0,
+      connectTimeout: 30 * 1000,
+    }),
+  );
+  dispatcherInstalled = true;
+}
 
 export class OllamaClient {
   constructor(
@@ -45,12 +53,11 @@ export class OllamaClient {
     if (format !== undefined) body.format = format;
     if (system !== undefined) body.system = system;
     if (Object.keys(nestedOptions).length > 0) body.options = nestedOptions;
+    ensureLongTimeoutDispatcher();
     const r = await this.fetcher(`${this.host}/api/generate`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
-      // @ts-expect-error: Node fetch passes dispatcher through to undici.
-      dispatcher: longTimeoutDispatcher,
     });
     if (!r.ok) throw new Error(`Ollama generate failed: ${r.status}`);
     const j = (await r.json()) as { response: string };
