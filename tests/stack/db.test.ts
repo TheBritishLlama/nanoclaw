@@ -17,7 +17,7 @@ describe('stack db', () => {
     applyStackSchema(db);
   });
 
-  it('creates all 8 stack tables', () => {
+  it('creates all 9 stack tables', () => {
     const tables = db.prepare(
       "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'stack_%'"
     ).all() as { name: string }[];
@@ -26,6 +26,7 @@ describe('stack db', () => {
       'stack_candidate_sources',
       'stack_domain_mentions',
       'stack_foundations',
+      'stack_graded_pending',
       'stack_health_log',
       'stack_queue',
       'stack_ratings',

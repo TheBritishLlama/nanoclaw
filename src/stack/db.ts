@@ -89,11 +89,24 @@ CREATE TABLE IF NOT EXISTS stack_foundations (
   retries INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS stack_graded_pending (
+  url TEXT PRIMARY KEY,
+  source TEXT NOT NULL,
+  title TEXT NOT NULL,
+  blurb TEXT,
+  fetched_at TEXT NOT NULL,
+  bucket TEXT NOT NULL CHECK(bucket IN ('tool','concept','lore')),
+  confidence REAL NOT NULL,
+  reasoning TEXT,
+  graded_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_queue_status_created ON stack_queue(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_queue_email_message_id ON stack_queue(email_message_id);
 CREATE INDEX IF NOT EXISTS idx_ratings_drop_id ON stack_ratings(drop_id);
 CREATE INDEX IF NOT EXISTS idx_health_component_observed ON stack_health_log(component, observed_at);
 CREATE INDEX IF NOT EXISTS idx_candidate_status ON stack_candidate_sources(status);
+CREATE INDEX IF NOT EXISTS idx_graded_pending_graded_at ON stack_graded_pending(graded_at);
 `;
 
 export function applyStackSchema(db: Database.Database): void {
@@ -317,4 +330,76 @@ export function listActiveSourceDomains(db: Database.Database): string[] {
       source: string;
     }[]
   ).map((r) => r.source);
+}
+
+// ---- Graded-pending checkpoint -----------------------------------------------
+// A graded item that hasn't been enriched yet. Persists between stages so a
+// crash in stage 3+ doesn't waste the (slow) Qwen grading work.
+
+import type { Graded } from './types.js';
+
+export function insertGradedPending(
+  db: Database.Database,
+  items: Graded[],
+  gradedAt: string,
+): number {
+  if (items.length === 0) return 0;
+  const stmt = db.prepare(`
+    INSERT OR IGNORE INTO stack_graded_pending
+      (url, source, title, blurb, fetched_at, bucket, confidence, reasoning, graded_at)
+    VALUES (@url, @source, @title, @blurb, @fetchedAt, @bucket, @confidence, @reasoning, @gradedAt)
+  `);
+  let inserted = 0;
+  const tx = db.transaction((rows: Graded[]) => {
+    for (const g of rows) {
+      if (!g.bucket) continue;
+      const info = stmt.run({
+        url: g.raw.url,
+        source: g.raw.source,
+        title: g.raw.title,
+        blurb: g.raw.blurb ?? null,
+        fetchedAt: g.raw.fetchedAt,
+        bucket: g.bucket,
+        confidence: g.confidence,
+        reasoning: g.reasoning,
+        gradedAt,
+      });
+      inserted += info.changes;
+    }
+  });
+  tx(items);
+  return inserted;
+}
+
+export function listGradedPending(db: Database.Database): Graded[] {
+  const rows = db
+    .prepare(
+      `SELECT * FROM stack_graded_pending ORDER BY graded_at ASC`,
+    )
+    .all() as any[];
+  return rows.map((r) => ({
+    raw: {
+      source: r.source,
+      title: r.title,
+      url: r.url,
+      blurb: r.blurb ?? undefined,
+      fetchedAt: r.fetched_at,
+    },
+    keep: true,
+    bucket: r.bucket,
+    confidence: r.confidence,
+    reasoning: r.reasoning ?? '',
+  }));
+}
+
+export function deleteGradedPending(db: Database.Database, url: string): void {
+  db.prepare('DELETE FROM stack_graded_pending WHERE url = ?').run(url);
+}
+
+export function countGradedPending(db: Database.Database): number {
+  return (
+    db.prepare('SELECT COUNT(*) AS c FROM stack_graded_pending').get() as {
+      c: number;
+    }
+  ).c;
 }
