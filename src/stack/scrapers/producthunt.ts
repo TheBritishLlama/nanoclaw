@@ -17,25 +17,32 @@ export async function scrapeProductHunt(
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      'authorization': `Bearer ${token}`,
+      authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ query: QUERY }),
   });
   if (!r.ok) return [];
-  const j = await r.json() as {
+  const j = (await r.json()) as {
     data: {
       posts: {
-        edges: { node: { name: string; tagline?: string; website?: string; url?: string } }[];
+        edges: {
+          node: {
+            name: string;
+            tagline?: string;
+            website?: string;
+            url?: string;
+          };
+        }[];
       };
     };
   };
   const now = new Date().toISOString();
   return j.data.posts.edges
-    .map(e => ({
+    .map((e) => ({
       source: 'producthunt' as const,
       title: `${e.node.name}${e.node.tagline ? ' — ' + e.node.tagline : ''}`,
       url: e.node.website ?? e.node.url ?? '',
       fetchedAt: now,
     }))
-    .filter(i => i.url);
+    .filter((i) => i.url);
 }

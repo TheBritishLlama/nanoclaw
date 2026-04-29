@@ -1,10 +1,16 @@
 import type {
-  DiscoveryAlgorithm, DiscoveryContext, CandidateSourceObservation,
+  DiscoveryAlgorithm,
+  DiscoveryContext,
+  CandidateSourceObservation,
 } from '../registry.js';
 import {
-  recentDomainMentions, listActiveSourceDomains,
-  setRecentMentionScore, markSourceStaleness,
-  getCandidateSource, upsertCandidateSource, setCandidateRssAndStatus,
+  recentDomainMentions,
+  listActiveSourceDomains,
+  setRecentMentionScore,
+  markSourceStaleness,
+  getCandidateSource,
+  upsertCandidateSource,
+  setCandidateRssAndStatus,
 } from '../../db.js';
 import { discoverRssFeed, isBloomedDomain } from '../rss-discovery.js';
 
@@ -18,11 +24,13 @@ export const genericAlgorithm: DiscoveryAlgorithm = {
   async run(ctx: DiscoveryContext): Promise<CandidateSourceObservation[]> {
     const now = (ctx.now ?? (() => new Date()))();
     const windowDays = DEFAULT_WINDOW_DAYS;
-    const sinceIso = new Date(now.getTime() - windowDays * 86400000).toISOString();
+    const sinceIso = new Date(
+      now.getTime() - windowDays * 86400000,
+    ).toISOString();
     const nowIso = now.toISOString();
 
     const aggregates = recentDomainMentions(ctx.db, sinceIso);
-    const aggByDomain = new Map(aggregates.map(a => [a.domain, a]));
+    const aggByDomain = new Map(aggregates.map((a) => [a.domain, a]));
     const active = new Set(listActiveSourceDomains(ctx.db));
 
     const observed: CandidateSourceObservation[] = [];
@@ -53,8 +61,17 @@ export const genericAlgorithm: DiscoveryAlgorithm = {
         firstObservedAt: nowIso,
       });
       const rss = await discoverRssFeed(a.domain, ctx.webFetch);
-      setCandidateRssAndStatus(ctx.db, a.domain, rss, rss ? 'candidate' : 'probe_failed', nowIso);
-      observed.push({ domain: a.domain, origin_algorithm: 'generic_algorithm' });
+      setCandidateRssAndStatus(
+        ctx.db,
+        a.domain,
+        rss,
+        rss ? 'candidate' : 'probe_failed',
+        nowIso,
+      );
+      observed.push({
+        domain: a.domain,
+        origin_algorithm: 'generic_algorithm',
+      });
     }
 
     return observed;

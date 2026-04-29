@@ -94,7 +94,7 @@ export class GmailChannel implements Channel {
     if (TRUSTED_EMAIL_SENDERS.size === 0) {
       logger.warn(
         'TRUSTED_EMAIL_SENDERS is not configured — all inbound emails will reach Jarvis. ' +
-        'Set TRUSTED_EMAIL_SENDERS in .env to restrict access (e.g. kaitseng@seattleacademy.org).',
+          'Set TRUSTED_EMAIL_SENDERS in .env to restrict access (e.g. kaitseng@seattleacademy.org).',
       );
     } else {
       logger.info(
@@ -222,9 +222,9 @@ export class GmailChannel implements Channel {
 
     try {
       const db = getDb();
-      const row = db.prepare(
-        'SELECT id FROM stack_queue WHERE email_message_id = ?',
-      ).get(inReplyTo) as { id: string } | undefined;
+      const row = db
+        .prepare('SELECT id FROM stack_queue WHERE email_message_id = ?')
+        .get(inReplyTo) as { id: string } | undefined;
       if (!row) return false;
 
       // Lazy-import Stack modules only when we have a matching message
@@ -249,10 +249,16 @@ export class GmailChannel implements Channel {
         body,
       });
 
-      logger.info({ inReplyTo, acked: result.acked, reason: result.reason }, 'Stack inbound reply handled');
+      logger.info(
+        { inReplyTo, acked: result.acked, reason: result.reason },
+        'Stack inbound reply handled',
+      );
       return true;
     } catch (err) {
-      logger.warn({ err, inReplyTo }, 'Stack inbound dispatch failed — falling through to normal routing');
+      logger.warn(
+        { err, inReplyTo },
+        'Stack inbound dispatch failed — falling through to normal routing',
+      );
       return false;
     }
   }
@@ -345,7 +351,11 @@ export class GmailChannel implements Channel {
     // filter so Stack replies from the recipient address always get processed even
     // if TRUSTED_EMAIL_SENDERS is not configured to include it.
     if (inReplyTo && this.gmail) {
-      const handledByStack = await this.maybeDispatchToStack(inReplyTo, body, this.gmail);
+      const handledByStack = await this.maybeDispatchToStack(
+        inReplyTo,
+        body,
+        this.gmail,
+      );
       if (handledByStack) {
         // Mark as read and return — do not forward to NanoClaw agent.
         try {
@@ -355,7 +365,10 @@ export class GmailChannel implements Channel {
             requestBody: { removeLabelIds: ['UNREAD'] },
           });
         } catch (err) {
-          logger.warn({ messageId, err }, 'Failed to mark Stack reply email as read');
+          logger.warn(
+            { messageId, err },
+            'Failed to mark Stack reply email as read',
+          );
         }
         return;
       }

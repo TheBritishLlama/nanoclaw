@@ -10,7 +10,9 @@ export interface CandidateSourceObservation {
 
 export interface DiscoveryContext {
   db: Database.Database;
-  webFetch: (url: string) => Promise<{ ok: boolean; text: () => Promise<string> }>;
+  webFetch: (
+    url: string,
+  ) => Promise<{ ok: boolean; text: () => Promise<string> }>;
   classify: (prompt: string) => Promise<boolean>;
   search?: SearxngClient;
   bloomlist: string[];
@@ -30,7 +32,7 @@ export interface DiscoveryRegistry {
 }
 
 export function buildRegistry(algos: DiscoveryAlgorithm[]): DiscoveryRegistry {
-  const m = new Map(algos.map(a => [a.name, a]));
+  const m = new Map(algos.map((a) => [a.name, a]));
   return { get: (n) => m.get(n), list: () => [...m.values()] };
 }
 
@@ -44,6 +46,8 @@ export function registerEnabledOn(
     if (!c.enabled) continue;
     const algo = registry.get(c.name);
     if (!algo) continue;
-    scheduler.addCron(`discovery-${c.name}`, c.schedule, async () => { await algo.run(ctx); });
+    scheduler.addCron(`discovery-${c.name}`, c.schedule, async () => {
+      await algo.run(ctx);
+    });
   }
 }

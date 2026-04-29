@@ -5,14 +5,22 @@ import path from 'path';
 import { applyStackSchema } from './db.js';
 import { loadStackConfig } from './config.js';
 import { initVault } from './vault.js';
-import { OllamaClient, OllamaHealthMonitor, platformRestart, realSleep } from './ollama.js';
+import {
+  OllamaClient,
+  OllamaHealthMonitor,
+  platformRestart,
+  realSleep,
+} from './ollama.js';
 import { buildDefaultRegistry, runEnabledScrapers } from './scrapers/index.js';
 import { gradeBatch } from './pipeline/grader.js';
 import { enrich } from './pipeline/enricher.js';
 import { persistDrop } from './pipeline/confidence-gate.js';
 import { pickNextDrop, markSent } from './pipeline/picker.js';
 import { sendDropEmail } from './delivery/outbound.js';
-import { seedFoundations, ensureMinFoundationsInQueue } from './foundations/runner.js';
+import {
+  seedFoundations,
+  ensureMinFoundationsInQueue,
+} from './foundations/runner.js';
 import {
   buildExemplarBlock,
   buildRecentFeedbackBlock,
@@ -23,7 +31,11 @@ import { createStackGmail } from './gmail.js';
 import { createHaiku } from './haiku.js';
 import { observeMentions } from './discovery/mentions.js';
 import { runPromotionPass } from './discovery/promote.js';
-import { buildRegistry, registerEnabledOn, type DiscoveryContext } from './discovery/registry.js';
+import {
+  buildRegistry,
+  registerEnabledOn,
+  type DiscoveryContext,
+} from './discovery/registry.js';
 import { genericAlgorithm } from './discovery/algorithms/generic.js';
 import { scoutAHnComments } from './discovery/algorithms/scout-a-hn-comments.js';
 import { scoutBLobstersComments } from './discovery/algorithms/scout-b-lobsters-comments.js';
@@ -52,7 +64,9 @@ export async function initStack({ db }: InitStackDeps): Promise<void> {
 
   // Seed foundations from foundations.json if present
   if (fs.existsSync(FOUNDATIONS_CONFIG_PATH)) {
-    const rawFoundations = JSON.parse(fs.readFileSync(FOUNDATIONS_CONFIG_PATH, 'utf-8'));
+    const rawFoundations = JSON.parse(
+      fs.readFileSync(FOUNDATIONS_CONFIG_PATH, 'utf-8'),
+    );
     seedFoundations(db, rawFoundations);
   }
 
@@ -74,9 +88,10 @@ export async function initStack({ db }: InitStackDeps): Promise<void> {
   const haiku = createHaiku(cfg.enricherModel);
 
   // SearXNG client (Plan 2 — present when search.provider === 'searxng')
-  const searxng = cfg.search.provider === 'searxng'
-    ? new SearxngClient(cfg.search.searxngInstance)
-    : undefined;
+  const searxng =
+    cfg.search.provider === 'searxng'
+      ? new SearxngClient(cfg.search.searxngInstance)
+      : undefined;
 
   // Qwen 3 4B classifier closure for scouts (yes/no via /api/generate)
   const classify = async (prompt: string): Promise<boolean> => {
@@ -114,7 +129,10 @@ export async function initStack({ db }: InitStackDeps): Promise<void> {
 
   // Cron 1: daily scrape at 02:00
   scheduler.addCron('stack-scrape', '0 2 * * *', async () => {
-    const items = await runEnabledScrapers(cfg.enabledScrapers, scraperRegistry);
+    const items = await runEnabledScrapers(
+      cfg.enabledScrapers,
+      scraperRegistry,
+    );
 
     const exemplarBlock = buildExemplarBlock(db, 14);
     const recentFeedbackBlock = buildRecentFeedbackBlock(db, 14);
@@ -128,19 +146,29 @@ export async function initStack({ db }: InitStackDeps): Promise<void> {
 
     for (const g of graded) {
       if (!g.keep || !g.bucket) continue;
-      const drop = await enrich(haiku, async (url) => {
-        const r = await fetch(url);
-        return r.text();
-      }, g);
+      const drop = await enrich(
+        haiku,
+        async (url) => {
+          const r = await fetch(url);
+          return r.text();
+        },
+        g,
+      );
       if (!drop) continue;
       persistDrop(db, cfg.vaultPath, drop);
     }
 
     // Plan 2: feed scraped items into the domain mention observer for generic_algorithm.
-    observeMentions(db, items, cfg.discovery.domainBloomlist, new Date().toISOString());
+    observeMentions(
+      db,
+      items,
+      cfg.discovery.domainBloomlist,
+      new Date().toISOString(),
+    );
 
     await ensureMinFoundationsInQueue(
-      db, cfg.vaultPath,
+      db,
+      cfg.vaultPath,
       async (foundationItem) => {
         const fakeGraded = {
           raw: {
@@ -154,11 +182,18 @@ export async function initStack({ db }: InitStackDeps): Promise<void> {
           confidence: 0.95,
           reasoning: 'Foundation item',
         };
-        const drop = await enrich(haiku, async (url) => {
-          const r = await fetch(url);
-          return r.text();
-        }, fakeGraded);
-        if (!drop) throw new Error(`Foundation enrich returned null for ${foundationItem.id}`);
+        const drop = await enrich(
+          haiku,
+          async (url) => {
+            const r = await fetch(url);
+            return r.text();
+          },
+          fakeGraded,
+        );
+        if (!drop)
+          throw new Error(
+            `Foundation enrich returned null for ${foundationItem.id}`,
+          );
         return drop;
       },
       cfg.queueMinDepth,
@@ -201,7 +236,12 @@ export async function initStack({ db }: InitStackDeps): Promise<void> {
   });
 
   // Plan 2 — Crons 7+: discovery algorithm crons (one per enabled entry)
-  registerEnabledOn(scheduler, discoveryRegistry, cfg.discoveryAlgorithms, discoveryCtx);
+  registerEnabledOn(
+    scheduler,
+    discoveryRegistry,
+    cfg.discoveryAlgorithms,
+    discoveryCtx,
+  );
 
   scheduler.start();
 }

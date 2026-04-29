@@ -6,23 +6,32 @@ const execAsync = promisify(exec);
 type Fetcher = typeof fetch;
 
 export class OllamaClient {
-  constructor(private host: string, private fetcher: Fetcher = fetch) {}
+  constructor(
+    private host: string,
+    private fetcher: Fetcher = fetch,
+  ) {}
 
   async ping(): Promise<boolean> {
     try {
       const r = await this.fetcher(`${this.host}/api/tags`);
       return r.ok;
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   }
 
-  async generate(model: string, prompt: string, options: Record<string, any> = {}): Promise<string> {
+  async generate(
+    model: string,
+    prompt: string,
+    options: Record<string, any> = {},
+  ): Promise<string> {
     const r = await this.fetcher(`${this.host}/api/generate`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ model, prompt, stream: false, ...options }),
     });
     if (!r.ok) throw new Error(`Ollama generate failed: ${r.status}`);
-    const j = await r.json() as { response: string };
+    const j = (await r.json()) as { response: string };
     return j.response;
   }
 }
@@ -43,12 +52,17 @@ export class OllamaHealthMonitor {
 
   async checkAndRecover(): Promise<HealthCheckResult> {
     if (await this.deps.ping()) return { state: 'healthy', detail: 'ok' };
-    try { await this.deps.restart(); }
-    catch (e: any) {
-      return { state: 'degraded', detail: `restart failed: ${e?.message ?? e}` };
+    try {
+      await this.deps.restart();
+    } catch (e: any) {
+      return {
+        state: 'degraded',
+        detail: `restart failed: ${e?.message ?? e}`,
+      };
     }
     await this.deps.sleepMs(10_000);
-    if (await this.deps.ping()) return { state: 'recovered', detail: 'restart succeeded' };
+    if (await this.deps.ping())
+      return { state: 'recovered', detail: 'restart succeeded' };
     return { state: 'degraded', detail: 'still down after restart' };
   }
 }
@@ -66,4 +80,5 @@ export function platformRestart(): () => Promise<void> {
     }
   };
 }
-export const realSleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+export const realSleep = (ms: number) =>
+  new Promise<void>((r) => setTimeout(r, ms));

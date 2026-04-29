@@ -51,7 +51,11 @@ export interface StackConfig {
   enricherModel: string;
   rssFeeds: string[];
   enabledScrapers: string[];
-  ollama: { host: string; watchdogIntervalMinutes: number; restartCommand: string };
+  ollama: {
+    host: string;
+    watchdogIntervalMinutes: number;
+    restartCommand: string;
+  };
   samplingFormula: SamplingFormula;
   discoveryAlgorithms: DiscoveryAlgorithmConfig[];
   discovery: DiscoveryConfig;
@@ -66,26 +70,37 @@ const KNOWN_ALGORITHMS = new Set([
 ]);
 
 function validate(cfg: StackConfig): void {
-  const sum = cfg.bucketWeights.tool + cfg.bucketWeights.concept + cfg.bucketWeights.lore;
+  const sum =
+    cfg.bucketWeights.tool + cfg.bucketWeights.concept + cfg.bucketWeights.lore;
   if (Math.abs(sum - 1.0) > 0.001) {
     throw new Error(`bucketWeights must sum to 1.0, got ${sum}`);
   }
   if (cfg.confidenceThreshold < 0 || cfg.confidenceThreshold > 1) {
-    throw new Error(`confidenceThreshold must be 0..1, got ${cfg.confidenceThreshold}`);
+    throw new Error(
+      `confidenceThreshold must be 0..1, got ${cfg.confidenceThreshold}`,
+    );
   }
   if (cfg.reviewApproveThreshold < 1 || cfg.reviewApproveThreshold > 10) {
-    throw new Error(`reviewApproveThreshold must be 1..10, got ${cfg.reviewApproveThreshold}`);
+    throw new Error(
+      `reviewApproveThreshold must be 1..10, got ${cfg.reviewApproveThreshold}`,
+    );
   }
 
   const s = cfg.samplingFormula;
   if (s.minSampleProbability < 0 || s.minSampleProbability > 1) {
-    throw new Error(`samplingFormula.minSampleProbability must be 0..1, got ${s.minSampleProbability}`);
+    throw new Error(
+      `samplingFormula.minSampleProbability must be 0..1, got ${s.minSampleProbability}`,
+    );
   }
   if (s.randomJitterMin > s.randomJitterMax) {
-    throw new Error(`samplingFormula.randomJitterMin (${s.randomJitterMin}) must be <= randomJitterMax (${s.randomJitterMax})`);
+    throw new Error(
+      `samplingFormula.randomJitterMin (${s.randomJitterMin}) must be <= randomJitterMax (${s.randomJitterMax})`,
+    );
   }
   if (s.tier2SamplePercent < 0 || s.tier2SamplePercent > 1) {
-    throw new Error(`samplingFormula.tier2SamplePercent must be 0..1, got ${s.tier2SamplePercent}`);
+    throw new Error(
+      `samplingFormula.tier2SamplePercent must be 0..1, got ${s.tier2SamplePercent}`,
+    );
   }
 
   for (const a of cfg.discoveryAlgorithms) {
@@ -95,7 +110,9 @@ function validate(cfg: StackConfig): void {
   }
 
   if (cfg.search.provider !== 'searxng') {
-    throw new Error(`search.provider must be 'searxng' (got '${cfg.search.provider}')`);
+    throw new Error(
+      `search.provider must be 'searxng' (got '${cfg.search.provider}')`,
+    );
   }
 }
 

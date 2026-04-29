@@ -99,16 +99,26 @@ CREATE INDEX IF NOT EXISTS idx_candidate_status ON stack_candidate_sources(statu
 export function applyStackSchema(db: Database.Database): void {
   db.exec(SCHEMA_SQL);
   // Forward-compat: add Plan 2 columns if a Plan 1 deployment is being upgraded.
-  const cols = db.prepare("PRAGMA table_info(stack_source_stats)").all() as { name: string }[];
-  const have = new Set(cols.map(c => c.name));
-  if (!have.has('staleness')) db.exec('ALTER TABLE stack_source_stats ADD COLUMN staleness TEXT');
-  if (!have.has('recent_mention_score')) db.exec('ALTER TABLE stack_source_stats ADD COLUMN recent_mention_score REAL');
+  const cols = db.prepare('PRAGMA table_info(stack_source_stats)').all() as {
+    name: string;
+  }[];
+  const have = new Set(cols.map((c) => c.name));
+  if (!have.has('staleness'))
+    db.exec('ALTER TABLE stack_source_stats ADD COLUMN staleness TEXT');
+  if (!have.has('recent_mention_score'))
+    db.exec(
+      'ALTER TABLE stack_source_stats ADD COLUMN recent_mention_score REAL',
+    );
 }
 
-type DropInsert = Omit<Drop, 'sentAt' | 'rating' | 'ratedAt' | 'emailMessageId'>;
+type DropInsert = Omit<
+  Drop,
+  'sentAt' | 'rating' | 'ratedAt' | 'emailMessageId'
+>;
 
 export function insertQueueDrop(db: Database.Database, drop: DropInsert): void {
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO stack_queue (
       id, bucket, name, tagline, body_html, body_plain,
       source_url, source_fetched_at, tags_json, confidence,
@@ -118,14 +128,19 @@ export function insertQueueDrop(db: Database.Database, drop: DropInsert): void {
       @sourceUrl, @sourceFetchedAt, @tagsJson, @confidence,
       @status, @vaultPath, @createdAt
     )
-  `).run({ ...drop, tagsJson: JSON.stringify(drop.tags) });
+  `,
+  ).run({ ...drop, tagsJson: JSON.stringify(drop.tags) });
 }
 
 export function getQueuedDropsOldestFirst(db: Database.Database): Drop[] {
-  const rows = db.prepare(`
+  const rows = db
+    .prepare(
+      `
     SELECT * FROM stack_queue WHERE status = 'queued' ORDER BY created_at ASC
-  `).all() as any[];
-  return rows.map(r => ({
+  `,
+    )
+    .all() as any[];
+  return rows.map((r) => ({
     id: r.id,
     bucket: r.bucket,
     name: r.name,
@@ -146,10 +161,19 @@ export function getQueuedDropsOldestFirst(db: Database.Database): Drop[] {
 
 // ---- Discovery (Plan 2) queries ---------------------------------------------
 
-export interface DomainMentionInsert { domain: string; source: string; observedAt: string; }
-export function insertDomainMention(db: Database.Database, m: DomainMentionInsert): void {
-  db.prepare(`INSERT INTO stack_domain_mentions (domain, source, observed_at)
-              VALUES (@domain, @source, @observedAt)`).run(m);
+export interface DomainMentionInsert {
+  domain: string;
+  source: string;
+  observedAt: string;
+}
+export function insertDomainMention(
+  db: Database.Database,
+  m: DomainMentionInsert,
+): void {
+  db.prepare(
+    `INSERT INTO stack_domain_mentions (domain, source, observed_at)
+              VALUES (@domain, @source, @observedAt)`,
+  ).run(m);
 }
 
 export interface DomainMentionAggregate {
@@ -157,24 +181,40 @@ export interface DomainMentionAggregate {
   recent_mentions: number;
   distinct_source_count: number;
 }
-export function recentDomainMentions(db: Database.Database, sinceIso: string): DomainMentionAggregate[] {
-  return db.prepare(`
+export function recentDomainMentions(
+  db: Database.Database,
+  sinceIso: string,
+): DomainMentionAggregate[] {
+  return db
+    .prepare(
+      `
     SELECT domain,
            COUNT(*) AS recent_mentions,
            COUNT(DISTINCT source) AS distinct_source_count
     FROM stack_domain_mentions
     WHERE observed_at >= ?
     GROUP BY domain
-  `).all(sinceIso) as DomainMentionAggregate[];
+  `,
+    )
+    .all(sinceIso) as DomainMentionAggregate[];
 }
 
-export interface CandidateUpsert { domain: string; origin_algorithm: string; firstObservedAt: string; }
-export function upsertCandidateSource(db: Database.Database, c: CandidateUpsert): void {
-  db.prepare(`
+export interface CandidateUpsert {
+  domain: string;
+  origin_algorithm: string;
+  firstObservedAt: string;
+}
+export function upsertCandidateSource(
+  db: Database.Database,
+  c: CandidateUpsert,
+): void {
+  db.prepare(
+    `
     INSERT INTO stack_candidate_sources (domain, origin_algorithm, first_observed_at, occurrence_count, status)
     VALUES (@domain, @origin_algorithm, @firstObservedAt, 1, 'observed')
     ON CONFLICT(domain) DO UPDATE SET occurrence_count = occurrence_count + 1
-  `).run(c);
+  `,
+  ).run(c);
 }
 
 export interface CandidateSource {
@@ -183,27 +223,43 @@ export interface CandidateSource {
   first_observed_at: string;
   occurrence_count: number;
   rss_url: string | null;
-  status: 'observed'|'probe_failed'|'candidate'|'promoted'|'archived';
+  status: 'observed' | 'probe_failed' | 'candidate' | 'promoted' | 'archived';
   trial_drops_sent: number;
   trial_avg_rating: number | null;
   last_probed_at: string | null;
   promoted_at: string | null;
 }
-export function getCandidateSource(db: Database.Database, domain: string): CandidateSource | undefined {
-  return db.prepare('SELECT * FROM stack_candidate_sources WHERE domain = ?').get(domain) as CandidateSource | undefined;
+export function getCandidateSource(
+  db: Database.Database,
+  domain: string,
+): CandidateSource | undefined {
+  return db
+    .prepare('SELECT * FROM stack_candidate_sources WHERE domain = ?')
+    .get(domain) as CandidateSource | undefined;
 }
 
 export function setCandidateRssAndStatus(
-  db: Database.Database, domain: string, rss_url: string | null,
-  status: CandidateSource['status'], probedAt: string,
+  db: Database.Database,
+  domain: string,
+  rss_url: string | null,
+  status: CandidateSource['status'],
+  probedAt: string,
 ): void {
-  db.prepare(`UPDATE stack_candidate_sources
+  db.prepare(
+    `UPDATE stack_candidate_sources
               SET rss_url = ?, status = ?, last_probed_at = ?
-              WHERE domain = ?`).run(rss_url, status, probedAt, domain);
+              WHERE domain = ?`,
+  ).run(rss_url, status, probedAt, domain);
 }
 
-export function listCandidatesByStatus(db: Database.Database, status: CandidateSource['status']): CandidateSource[] {
-  return db.prepare('SELECT * FROM stack_candidate_sources WHERE status = ? ORDER BY first_observed_at ASC')
+export function listCandidatesByStatus(
+  db: Database.Database,
+  status: CandidateSource['status'],
+): CandidateSource[] {
+  return db
+    .prepare(
+      'SELECT * FROM stack_candidate_sources WHERE status = ? ORDER BY first_observed_at ASC',
+    )
     .all(status) as CandidateSource[];
 }
 
@@ -216,30 +272,49 @@ export interface SourceStat {
   recent_mention_score: number | null;
   updated_at: string;
 }
-export function getSourceStat(db: Database.Database, source: string): SourceStat | undefined {
-  return db.prepare('SELECT * FROM stack_source_stats WHERE source = ?').get(source) as SourceStat | undefined;
+export function getSourceStat(
+  db: Database.Database,
+  source: string,
+): SourceStat | undefined {
+  return db
+    .prepare('SELECT * FROM stack_source_stats WHERE source = ?')
+    .get(source) as SourceStat | undefined;
 }
 
 export function markSourceStaleness(
-  db: Database.Database, source: string, staleness: 'fresh'|'going_stale'|null, atIso: string,
+  db: Database.Database,
+  source: string,
+  staleness: 'fresh' | 'going_stale' | null,
+  atIso: string,
 ): void {
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO stack_source_stats (source, staleness, updated_at)
     VALUES (@source, @staleness, @at)
     ON CONFLICT(source) DO UPDATE SET staleness = @staleness, updated_at = @at
-  `).run({ source, staleness, at: atIso });
+  `,
+  ).run({ source, staleness, at: atIso });
 }
 
 export function setRecentMentionScore(
-  db: Database.Database, source: string, score: number, atIso: string,
+  db: Database.Database,
+  source: string,
+  score: number,
+  atIso: string,
 ): void {
-  db.prepare(`
+  db.prepare(
+    `
     INSERT INTO stack_source_stats (source, recent_mention_score, updated_at)
     VALUES (@source, @score, @at)
     ON CONFLICT(source) DO UPDATE SET recent_mention_score = @score, updated_at = @at
-  `).run({ source, score, at: atIso });
+  `,
+  ).run({ source, score, at: atIso });
 }
 
 export function listActiveSourceDomains(db: Database.Database): string[] {
-  return (db.prepare('SELECT source FROM stack_source_stats').all() as { source: string }[]).map(r => r.source);
+  return (
+    db.prepare('SELECT source FROM stack_source_stats').all() as {
+      source: string;
+    }[]
+  ).map((r) => r.source);
 }

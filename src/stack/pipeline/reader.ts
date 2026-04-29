@@ -9,7 +9,10 @@ export interface ExtractedArticle {
 
 const MIN_TEXT_LENGTH = 200;
 
-export function extractReadable(html: string, url: string): ExtractedArticle | null {
+export function extractReadable(
+  html: string,
+  url: string,
+): ExtractedArticle | null {
   let dom: JSDOM;
   try {
     dom = new JSDOM(html, { url });
@@ -25,5 +28,9 @@ export function extractReadable(html: string, url: string): ExtractedArticle | n
   if (!parsed) return null;
   const text = (parsed.textContent ?? '').trim();
   if (text.length < MIN_TEXT_LENGTH) return null;
-  return { title: parsed.title ?? null, textContent: text, length: text.length };
+  return {
+    title: parsed.title ?? null,
+    textContent: text,
+    length: text.length,
+  };
 }

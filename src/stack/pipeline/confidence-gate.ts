@@ -4,7 +4,11 @@ import { writeDrop } from '../vault.js';
 import { insertQueueDrop } from '../db.js';
 import type { Drop } from '../types.js';
 
-export function persistDrop(db: Database.Database, vaultPath: string, drop: Drop): Drop {
+export function persistDrop(
+  db: Database.Database,
+  vaultPath: string,
+  drop: Drop,
+): Drop {
   const fullVaultPath = writeDrop(vaultPath, drop);
   const relVaultPath = path.relative(vaultPath, fullVaultPath);
   const finalDrop = { ...drop, vaultPath: relVaultPath };

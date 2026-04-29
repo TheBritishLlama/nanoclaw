@@ -3,8 +3,14 @@ import path from 'path';
 import type { Drop } from './types.js';
 
 const SUBDIRS = [
-  'Drops/Tools', 'Drops/Concepts', 'Drops/Lore', 'Drops/Foundations',
-  'Scraped/Pending', 'Scraped/Dropped', 'Reviews', 'Index',
+  'Drops/Tools',
+  'Drops/Concepts',
+  'Drops/Lore',
+  'Drops/Foundations',
+  'Scraped/Pending',
+  'Scraped/Dropped',
+  'Reviews',
+  'Index',
 ];
 
 export function initVault(vaultPath: string): void {
@@ -13,14 +19,18 @@ export function initVault(vaultPath: string): void {
   }
   const readme = path.join(vaultPath, 'Stack.md');
   if (!fs.existsSync(readme)) {
-    fs.writeFileSync(readme,
-      '# Stack\n\nDaily-drop tutor knowledge base. Drops live under `Drops/`. Scrape decisions under `Scraped/`. Pending review items under `Reviews/`.\n');
+    fs.writeFileSync(
+      readme,
+      '# Stack\n\nDaily-drop tutor knowledge base. Drops live under `Drops/`. Scrape decisions under `Scraped/`. Pending review items under `Reviews/`.\n',
+    );
   }
 }
 
 const BUCKET_DIR: Record<Drop['bucket'], string> = {
-  tool: 'Drops/Tools', concept: 'Drops/Concepts',
-  lore: 'Drops/Lore', foundation: 'Drops/Foundations',
+  tool: 'Drops/Tools',
+  concept: 'Drops/Concepts',
+  lore: 'Drops/Lore',
+  foundation: 'Drops/Foundations',
 };
 
 function safeFilename(name: string): string {
@@ -48,7 +58,9 @@ export function writeDrop(vaultPath: string, drop: Drop): string {
     '',
     drop.bodyHtml,
     '',
-  ].filter(l => l !== null).join('\n');
+  ]
+    .filter((l) => l !== null)
+    .join('\n');
   fs.writeFileSync(fullPath, fm);
   return fullPath;
 }
@@ -63,24 +75,33 @@ export function readDropFrontmatter(filePath: string): Record<string, any> {
     if (idx === -1) continue;
     const key = line.slice(0, idx).trim();
     const val = line.slice(idx + 1).trim();
-    try { out[key] = JSON.parse(val); }
-    catch { out[key] = val; }
+    try {
+      out[key] = JSON.parse(val);
+    } catch {
+      out[key] = val;
+    }
   }
   return out;
 }
 
 export function updateDropRating(
   filePath: string,
-  rating: { rating: number; feedback?: string; ratedAt: string }
+  rating: { rating: number; feedback?: string; ratedAt: string },
 ): void {
   const raw = fs.readFileSync(filePath, 'utf-8');
   const m = raw.match(/^(---\n)([\s\S]*?)(\n---\n[\s\S]*)$/);
   if (!m) throw new Error(`No frontmatter in ${filePath}`);
-  const lines = m[2].split('\n').filter(l =>
-    !l.startsWith('rating:') && !l.startsWith('ratedAt:') && !l.startsWith('feedback:')
-  );
+  const lines = m[2]
+    .split('\n')
+    .filter(
+      (l) =>
+        !l.startsWith('rating:') &&
+        !l.startsWith('ratedAt:') &&
+        !l.startsWith('feedback:'),
+    );
   lines.push(`rating: ${rating.rating}`);
   lines.push(`ratedAt: ${rating.ratedAt}`);
-  if (rating.feedback) lines.push(`feedback: ${JSON.stringify(rating.feedback)}`);
+  if (rating.feedback)
+    lines.push(`feedback: ${JSON.stringify(rating.feedback)}`);
   fs.writeFileSync(filePath, m[1] + lines.join('\n') + m[3]);
 }

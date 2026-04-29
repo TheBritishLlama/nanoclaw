@@ -8,13 +8,20 @@ function hostFromUrl(url: string): string {
   }
 }
 
-export function recomputeSourceStats(db: Database.Database, windowDays: number): void {
+export function recomputeSourceStats(
+  db: Database.Database,
+  windowDays: number,
+): void {
   const cutoff = new Date(Date.now() - windowDays * 86400_000).toISOString();
-  const rows = db.prepare(`
+  const rows = db
+    .prepare(
+      `
     SELECT q.source_url, r.rating
     FROM stack_queue q JOIN stack_ratings r ON r.drop_id = q.id
     WHERE r.rated_at >= ?
-  `).all(cutoff) as { source_url: string; rating: number }[];
+  `,
+    )
+    .all(cutoff) as { source_url: string; rating: number }[];
 
   const byHost = new Map<string, number[]>();
   for (const r of rows) {

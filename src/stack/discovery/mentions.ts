@@ -6,8 +6,11 @@ import { isBloomedDomain } from './rss-discovery.js';
 const URL_RE = /https?:\/\/[^\s"'<>]+/gi;
 
 function domainOf(url: string): string | null {
-  try { return new URL(url).hostname.toLowerCase().replace(/^www\./, ''); }
-  catch { return null; }
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+  } catch {
+    return null;
+  }
 }
 
 export function observeMentions(
@@ -20,7 +23,11 @@ export function observeMentions(
     const seen = new Set<string>();
     const direct = domainOf(item.url);
     if (direct && !isBloomedDomain(direct, bloomlist)) {
-      insertDomainMention(db, { domain: direct, source: item.source, observedAt });
+      insertDomainMention(db, {
+        domain: direct,
+        source: item.source,
+        observedAt,
+      });
       seen.add(direct);
     }
     if (item.blurb) {
