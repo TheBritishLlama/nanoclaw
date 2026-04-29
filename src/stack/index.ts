@@ -29,6 +29,18 @@ import {
 import { StackScheduler } from './scheduler.js';
 import { createStackGmail } from './gmail.js';
 import { createHaiku } from './haiku.js';
+import { observeMentions } from './discovery/mentions.js';
+import { runPromotionPass } from './discovery/promote.js';
+import {
+  buildRegistry,
+  registerEnabledOn,
+  type DiscoveryContext,
+} from './discovery/registry.js';
+import { genericAlgorithm } from './discovery/algorithms/generic.js';
+import { scoutAHnComments } from './discovery/algorithms/scout-a-hn-comments.js';
+import { scoutBLobstersComments } from './discovery/algorithms/scout-b-lobsters-comments.js';
+import { scoutESearxngTopic } from './discovery/algorithms/scout-e-searxng-topic.js';
+import { SearxngClient } from './discovery/search.js';
 
 // Re-export for Task 20 wiring
 export { handleInboundReply } from './delivery/inbound.js';
@@ -75,6 +87,41 @@ export async function initStack({ db }: InitStackDeps): Promise<void> {
   const gmail = await createStackGmail();
   const haiku = createHaiku(cfg.enricherModel);
 
+  // SearXNG client (Plan 2 — present when search.provider === 'searxng')
+  const searxng =
+    cfg.search.provider === 'searxng'
+      ? new SearxngClient(cfg.search.searxngInstance)
+      : undefined;
+
+  // Qwen 3 4B classifier closure for scouts (yes/no via /api/generate)
+  const classify = async (prompt: string): Promise<boolean> => {
+    try {
+      const out = await ollamaClient.generate(cfg.scoutClassifierModel, prompt);
+      return /^\s*yes\b/i.test(out);
+    } catch {
+      return false;
+    }
+  };
+
+  // Discovery context (shared by all algorithms)
+  const discoveryCtx: DiscoveryContext = {
+    db,
+    webFetch: async (url) => {
+      const r = await fetch(url);
+      return { ok: r.ok, text: () => r.text() };
+    },
+    classify,
+    search: searxng,
+    bloomlist: cfg.discovery.domainBloomlist,
+    occurrenceThreshold: cfg.discovery.occurrenceThresholdForRssProbe,
+  };
+  const discoveryRegistry = buildRegistry([
+    genericAlgorithm,
+    scoutAHnComments,
+    scoutBLobstersComments,
+    scoutESearxngTopic,
+  ]);
+
   const addrs = { from: cfg.senderEmail, to: cfg.recipientEmail };
 
   // Build scheduler
@@ -110,6 +157,14 @@ export async function initStack({ db }: InitStackDeps): Promise<void> {
       if (!drop) continue;
       persistDrop(db, cfg.vaultPath, drop);
     }
+
+    // Plan 2: feed scraped items into the domain mention observer for generic_algorithm.
+    observeMentions(
+      db,
+      items,
+      cfg.discovery.domainBloomlist,
+      new Date().toISOString(),
+    );
 
     await ensureMinFoundationsInQueue(
       db,
@@ -167,6 +222,26 @@ export async function initStack({ db }: InitStackDeps): Promise<void> {
   scheduler.addCron('stack-ollama-watchdog', '*/15 * * * *', async () => {
     await ollamaMonitor.checkAndRecover();
   });
+
+  // Plan 2 — Cron 6: daily 04:30 promotion / demotion pass
+  scheduler.addCron('stack-promote', '30 4 * * *', async () => {
+    runPromotionPass(db, {
+      trialDropsCount: cfg.discovery.trialDropsCount,
+      promotionMinAvgRating: cfg.discovery.promotionMinAvgRating,
+      archiveMaxAvgRating: cfg.discovery.archiveMaxAvgRating,
+      trialWindowDays: 60,
+      demotionMinRatedCount: 20,
+      demotionAvgRatingThreshold: 3,
+    });
+  });
+
+  // Plan 2 — Crons 7+: discovery algorithm crons (one per enabled entry)
+  registerEnabledOn(
+    scheduler,
+    discoveryRegistry,
+    cfg.discoveryAlgorithms,
+    discoveryCtx,
+  );
 
   scheduler.start();
 }
