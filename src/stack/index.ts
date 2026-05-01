@@ -259,14 +259,39 @@ export async function initStack({ db }: InitStackDeps): Promise<void> {
 
   // Helper: pick and deliver a multi-drop email (cfg.dropsPerEmail topics in
   // one email, with sources consolidated at the bottom).
+  // Throttle: skip if any Stack drop was sent in the last DELIVERY_COOLDOWN_MS
+  // — defends against duplicate cron fires, runaway re-spawn loops, or any
+  // future trigger source we haven't anticipated. Daily crons are >=2h apart
+  // so a 90-min window never suppresses a legit fire.
   const dropsPerEmail = cfg.dropsPerEmail ?? 3;
-  const deliverOneEmail = async () => {
+  const DELIVERY_COOLDOWN_MS = 90 * 60 * 1000;
+  const deliverOneEmail = async (cronId: string) => {
+    const lastSentRow = db
+      .prepare(
+        "SELECT MAX(sent_at) AS last_sent FROM stack_queue WHERE status='sent'",
+      )
+      .get() as { last_sent: string | null };
+    if (lastSentRow?.last_sent) {
+      const sinceMs = Date.now() - Date.parse(lastSentRow.last_sent);
+      if (sinceMs < DELIVERY_COOLDOWN_MS) {
+        console.log(
+          `[stack] ${cronId}: skipping delivery — last email sent ${Math.round(sinceMs / 60000)} min ago (cooldown ${DELIVERY_COOLDOWN_MS / 60000} min)`,
+        );
+        return;
+      }
+    }
     const drops = pickNextDrops(db, dropsPerEmail, {
       rng: Math.random,
       foundationsMixRatio: cfg.foundationsMixRatio,
       bucketWeights: cfg.bucketWeights,
     });
-    if (drops.length === 0) return;
+    if (drops.length === 0) {
+      console.log(`[stack] ${cronId}: no drops queued, skipping`);
+      return;
+    }
+    console.log(
+      `[stack] ${cronId}: sending ${drops.length} drops: ${drops.map((d) => `${d.bucket}/${d.name}`).join(', ')}`,
+    );
     const messageId = await sendMultiDropEmail(gmail, addrs, drops);
     markManySent(
       db,
@@ -274,13 +299,20 @@ export async function initStack({ db }: InitStackDeps): Promise<void> {
       new Date().toISOString(),
       messageId,
     );
+    console.log(`[stack] ${cronId}: sent ${messageId}`);
   };
 
   // Crons 2–4: three delivery windows derived from config
   const [t1, t2, t3] = cfg.deliveryTimes;
-  scheduler.addCron('stack-deliver-' + t1, timeToCron(t1), deliverOneEmail);
-  scheduler.addCron('stack-deliver-' + t2, timeToCron(t2), deliverOneEmail);
-  scheduler.addCron('stack-deliver-' + t3, timeToCron(t3), deliverOneEmail);
+  scheduler.addCron('stack-deliver-' + t1, timeToCron(t1), () =>
+    deliverOneEmail('stack-deliver-' + t1),
+  );
+  scheduler.addCron('stack-deliver-' + t2, timeToCron(t2), () =>
+    deliverOneEmail('stack-deliver-' + t2),
+  );
+  scheduler.addCron('stack-deliver-' + t3, timeToCron(t3), () =>
+    deliverOneEmail('stack-deliver-' + t3),
+  );
 
   // Cron 5: Ollama watchdog every 15 minutes
   scheduler.addCron('stack-ollama-watchdog', '*/15 * * * *', async () => {

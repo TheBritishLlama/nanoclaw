@@ -91,9 +91,7 @@ function validate(cfg: StackConfig): void {
     cfg.dropsPerEmail !== undefined &&
     (cfg.dropsPerEmail < 1 || cfg.dropsPerEmail > 10)
   ) {
-    throw new Error(
-      `dropsPerEmail must be 1..10, got ${cfg.dropsPerEmail}`,
-    );
+    throw new Error(`dropsPerEmail must be 1..10, got ${cfg.dropsPerEmail}`);
   }
 
   const s = cfg.samplingFormula;

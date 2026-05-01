@@ -137,10 +137,7 @@ ${sourcesList}
 </body></html>`.trim();
 
   const textSections = drops
-    .map(
-      (d) =>
-        `${d.name} — ${d.tagline}\n\n${stripInlineSource(d.bodyPlain)}`,
-    )
+    .map((d) => `${d.name} — ${d.tagline}\n\n${stripInlineSource(d.bodyPlain)}`)
     .join('\n\n---\n\n');
   const textSources = drops
     .map((d) => `  ${d.name} — ${d.sourceUrl}`)

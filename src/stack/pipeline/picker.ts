@@ -39,7 +39,10 @@ function notInClause(excludeIds: ReadonlySet<string>): {
 } {
   if (excludeIds.size === 0) return { clause: '', params: [] };
   const placeholders = [...excludeIds].map(() => '?').join(',');
-  return { clause: ` AND id NOT IN (${placeholders})`, params: [...excludeIds] };
+  return {
+    clause: ` AND id NOT IN (${placeholders})`,
+    params: [...excludeIds],
+  };
 }
 
 export function pickNextDrop(

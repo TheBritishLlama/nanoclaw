@@ -16,6 +16,16 @@ import type { GmailSender } from './delivery/outbound.js';
  * dispatcher to match replies against drops. The Gmail send response only
  * returns the internal message id (e.g. "190abc"), which is NOT the same.
  */
+// RFC 2047 encode a Subject header if it contains any non-ASCII bytes.
+// Gmail and most clients accept UTF-8 in headers, but the receiving stack
+// (Apple Mail, some web clients, downstream MTAs) can re-encode it as
+// Latin-1 producing garbled "Ã¢Â€Â"" runs. Encoding it as =?UTF-8?B?...?=
+// guarantees correct rendering regardless of the receiver.
+function encodeSubject(s: string): string {
+  if (/^[\x00-\x7F]*$/.test(s)) return s;
+  return `=?UTF-8?B?${Buffer.from(s, 'utf-8').toString('base64')}?=`;
+}
+
 export function wrapGmailClient(gmail: gmail_v1.Gmail): GmailSender {
   return {
     async send({ from, to, subject, html, text }) {
@@ -23,7 +33,7 @@ export function wrapGmailClient(gmail: gmail_v1.Gmail): GmailSender {
       const rawHeaders = [
         `From: ${from}`,
         `To: ${to}`,
-        `Subject: ${subject}`,
+        `Subject: ${encodeSubject(subject)}`,
         'MIME-Version: 1.0',
         `Content-Type: multipart/alternative; boundary="${boundary}"`,
         '',
